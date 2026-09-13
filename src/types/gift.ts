@@ -20,7 +20,7 @@ export interface GiftPhotoDraft {
   id: string;
   file?: File;
   previewUrl: string;
-  cloudinaryUrl?: string;
+  storedUrl?: string;
   caption: string;
   order: number;
   uploadStatus: "pending" | "uploading" | "uploaded" | "error";
@@ -40,7 +40,7 @@ export interface GiftBuilderState {
   // Local music state
   musicFile?: File | null;
   musicPreviewUrl?: string | null;
-  musicCloudinaryUrl?: string | null;
+  musicUrl?: string | null;
   musicName?: string | null;
   musicUploadStatus?: "idle" | "uploading" | "uploaded" | "error";
   musicUploadError?: string;

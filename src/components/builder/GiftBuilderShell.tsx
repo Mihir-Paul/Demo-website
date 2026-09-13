@@ -15,7 +15,7 @@ import { PinStep } from "./PinStep";
 import { ReviewStep } from "./ReviewStep";
 import { MusicStep } from "./MusicStep";
 import { GiftBuilderState, GiftPhotoDraft } from "@/types/gift";
-import { uploadFileToCloudinary } from "@/lib/cloudinary";
+import { uploadFile } from "@/lib/upload";
 import { safeFetchJson } from "@/lib/utils";
 
 const LOCAL_STORAGE_KEY = "joycraft_gift_builder_draft";
@@ -42,7 +42,7 @@ const DEFAULT_STATE: GiftBuilderState = {
   pinHint: "",
   musicFile: null,
   musicPreviewUrl: null,
-  musicCloudinaryUrl: null,
+  musicUrl: null,
   musicName: null,
   musicUploadStatus: "idle",
 };
@@ -66,20 +66,24 @@ export function GiftBuilderShell() {
       if (cached) {
         const parsed = JSON.parse(cached);
         if (parsed.state) {
+          const loadedMusicUrl = parsed.state.musicUrl || null;
           setState((prev) => ({
             ...prev,
             ...parsed.state,
-            photos: (parsed.state.photos || []).map((p: any) => ({
-              id: p.id,
-              previewUrl: p.previewUrl,
-              cloudinaryUrl: p.cloudinaryUrl,
-              caption: p.caption || "",
-              order: p.order || 0,
-              uploadStatus: p.cloudinaryUrl ? "uploaded" : "pending",
-            })),
-            musicCloudinaryUrl: parsed.state.musicCloudinaryUrl || null,
+            photos: (parsed.state.photos || []).map((p: any) => {
+              const url = p.storedUrl;
+              return {
+                id: p.id,
+                previewUrl: p.previewUrl,
+                storedUrl: url,
+                caption: p.caption || "",
+                order: p.order || 0,
+                uploadStatus: url ? "uploaded" : "pending",
+              };
+            }),
+            musicUrl: loadedMusicUrl,
             musicName: parsed.state.musicName || null,
-            musicUploadStatus: parsed.state.musicCloudinaryUrl ? "uploaded" : "idle",
+            musicUploadStatus: loadedMusicUrl ? "uploaded" : "idle",
           }));
         }
         if (parsed.giftId) setGiftId(parsed.giftId);
@@ -98,7 +102,7 @@ export function GiftBuilderShell() {
         photos: state.photos.map((p) => ({
           id: p.id,
           previewUrl: p.previewUrl,
-          cloudinaryUrl: p.cloudinaryUrl,
+          storedUrl: p.storedUrl,
           caption: p.caption,
           order: p.order,
           uploadStatus: p.uploadStatus,
@@ -144,8 +148,8 @@ export function GiftBuilderShell() {
     return Object.keys(newErrors).length === 0;
   };
 
-  // Upload pending photos to Cloudinary directly from the browser
-  const uploadPendingPhotos = async (targetId?: string): Promise<GiftPhotoDraft[]> => {
+  // Upload pending photos to persistent cloud storage
+  const uploadPendingPhotos = async (): Promise<GiftPhotoDraft[]> => {
     const updatedPhotos = [...state.photos];
 
     for (let i = 0; i < updatedPhotos.length; i++) {
@@ -156,10 +160,10 @@ export function GiftBuilderShell() {
         setState((prev) => ({ ...prev, photos: [...updatedPhotos] }));
 
         try {
-          const secureUrl = await uploadFileToCloudinary(photo.file, targetId || giftId || "draft");
+          const url = await uploadFile(photo.file);
           updatedPhotos[i] = {
             ...photo,
-            cloudinaryUrl: secureUrl,
+            storedUrl: url,
             uploadStatus: "uploaded",
           };
           setState((prev) => ({ ...prev, photos: [...updatedPhotos] }));
@@ -168,7 +172,7 @@ export function GiftBuilderShell() {
           updatedPhotos[i] = {
             ...photo,
             uploadStatus: "error",
-            uploadError: err.message || "Cloudinary upload failed",
+            uploadError: err.message || "Photo upload failed. Please try again.",
           };
           setState((prev) => ({ ...prev, photos: [...updatedPhotos] }));
         }
@@ -178,36 +182,32 @@ export function GiftBuilderShell() {
     return updatedPhotos;
   };
 
-  // Upload pending music to Cloudinary
-  const uploadPendingMusic = async (targetId?: string): Promise<string | null> => {
+  // Upload pending music to persistent cloud storage
+  const uploadPendingMusic = async (): Promise<string | null> => {
     if (state.musicFile && state.musicUploadStatus !== "uploaded") {
       setState((prev) => ({ ...prev, musicUploadStatus: "uploading", musicUploadError: undefined }));
 
       try {
-        const secureUrl = await uploadFileToCloudinary(
-          state.musicFile,
-          targetId || giftId || "draft",
-          { subfolder: "music", resourceType: "auto" }
-        );
+        const url = await uploadFile(state.musicFile);
 
         setState((prev) => ({
           ...prev,
-          musicCloudinaryUrl: secureUrl,
+          musicUrl: url,
           musicUploadStatus: "uploaded",
         }));
-        return secureUrl;
+        return url;
       } catch (err: any) {
         console.warn("Music upload failed:", err);
         setState((prev) => ({
           ...prev,
           musicUploadStatus: "error",
-          musicUploadError: err.message || "Failed to upload music to Cloudinary",
+          musicUploadError: err.message || "Music upload failed. Please try again.",
         }));
         return null;
       }
     }
 
-    return state.musicCloudinaryUrl || null;
+    return state.musicUrl || null;
   };
 
   const handleRetrySinglePhoto = async (photoId: string) => {
@@ -222,11 +222,11 @@ export function GiftBuilderShell() {
     setState({ ...state, photos: updated });
 
     try {
-      const secureUrl = await uploadFileToCloudinary(photo.file, giftId || "draft");
-      updated[index] = { ...photo, cloudinaryUrl: secureUrl, uploadStatus: "uploaded" };
+      const url = await uploadFile(photo.file);
+      updated[index] = { ...photo, storedUrl: url, uploadStatus: "uploaded" };
       setState({ ...state, photos: updated });
     } catch (err: any) {
-      updated[index] = { ...photo, uploadStatus: "error", uploadError: err.message };
+      updated[index] = { ...photo, uploadStatus: "error", uploadError: err.message || "Photo upload failed." };
       setState({ ...state, photos: updated });
     }
   };
@@ -238,11 +238,11 @@ export function GiftBuilderShell() {
 
     try {
       const currentPhotos = await uploadPendingPhotos();
-      const musicCloudinaryUrl = await uploadPendingMusic();
+      const storedMusicUrl = await uploadPendingMusic();
 
       const validPhotosPayload = currentPhotos
         .map((p, idx) => {
-          const finalUrl = p.cloudinaryUrl || p.previewUrl;
+          const finalUrl = p.storedUrl || p.previewUrl;
           return {
             url: finalUrl.trim(),
             caption: p.caption.trim(),
@@ -262,7 +262,7 @@ export function GiftBuilderShell() {
         theme: state.theme,
         pin: state.pin.trim() || undefined,
         pinHint: state.pinHint.trim() || undefined,
-        musicUrl: musicCloudinaryUrl || null,
+        musicUrl: storedMusicUrl || null,
         musicName: state.musicName || null,
         photos: validPhotosPayload,
         wishes: validWishesPayload,
@@ -398,7 +398,7 @@ export function GiftBuilderShell() {
             <MusicStep
               musicFile={state.musicFile}
               musicPreviewUrl={state.musicPreviewUrl}
-              musicCloudinaryUrl={state.musicCloudinaryUrl}
+              musicUrl={state.musicUrl}
               musicName={state.musicName}
               uploadStatus={state.musicUploadStatus}
               uploadError={state.musicUploadError}

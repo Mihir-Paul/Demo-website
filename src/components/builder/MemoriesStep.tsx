@@ -51,7 +51,7 @@ export function MemoriesStep({ photos, onChange, onRetryUpload }: MemoriesStepPr
         id: cryptoNativeRandomString(8),
         file,
         previewUrl,
-        cloudinaryUrl: undefined,
+        storedUrl: undefined,
         caption: "",
         order: photos.length + validFiles.length,
         uploadStatus: "pending",
@@ -210,7 +210,7 @@ export function MemoriesStep({ photos, onChange, onRetryUpload }: MemoriesStepPr
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {photos.map((photo, index) => {
-              const displayUrl = photo.cloudinaryUrl || photo.previewUrl;
+              const displayUrl = photo.storedUrl || photo.previewUrl;
 
               return (
                 <div

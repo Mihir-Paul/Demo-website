@@ -26,7 +26,7 @@ export function ReviewStep({
 
   const hasMusic = Boolean(
     state.musicName ||
-      state.musicCloudinaryUrl ||
+      state.musicUrl ||
       state.musicFile ||
       state.musicPreviewUrl
   );

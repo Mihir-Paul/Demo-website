@@ -4,7 +4,7 @@ import React, { useRef, useState, useEffect } from "react";
 import { Music, Upload, Trash2, RefreshCw, Play, Pause, AlertCircle, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
-const MAX_FILE_SIZE_MB = 20;
+const MAX_FILE_SIZE_MB = 35;
 const MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024;
 const ALLOWED_EXTENSIONS = [".mp3", ".wav", ".m4a", ".ogg", ".mp4", ".aac", ".flac"];
 const ALLOWED_MIME_PREFIXES = ["audio/", "video/mp4", "video/ogg"];
@@ -12,14 +12,14 @@ const ALLOWED_MIME_PREFIXES = ["audio/", "video/mp4", "video/ogg"];
 interface MusicStepProps {
   musicFile?: File | null;
   musicPreviewUrl?: string | null;
-  musicCloudinaryUrl?: string | null;
+  musicUrl?: string | null;
   musicName?: string | null;
   uploadStatus?: "idle" | "uploading" | "uploaded" | "error";
   uploadError?: string;
   onChange: (musicData: {
     musicFile?: File | null;
     musicPreviewUrl?: string | null;
-    musicCloudinaryUrl?: string | null;
+    musicUrl?: string | null;
     musicName?: string | null;
     musicUploadStatus?: "idle" | "uploading" | "uploaded" | "error";
     musicUploadError?: string;
@@ -29,7 +29,7 @@ interface MusicStepProps {
 export function MusicStep({
   musicFile,
   musicPreviewUrl,
-  musicCloudinaryUrl,
+  musicUrl,
   musicName,
   uploadStatus = "idle",
   uploadError,
@@ -43,7 +43,7 @@ export function MusicStep({
   const [duration, setDuration] = useState(0);
   const [errorMsg, setErrorMsg] = useState<string | null>(uploadError || null);
 
-  const activeAudioUrl = musicPreviewUrl || musicCloudinaryUrl || null;
+  const activeAudioUrl = musicPreviewUrl || musicUrl || null;
   const activeFileName = musicName || musicFile?.name || "Birthday Song";
 
   // Update audio duration and current time listener
@@ -91,7 +91,7 @@ export function MusicStep({
     onChange({
       musicFile: file,
       musicPreviewUrl: localUrl,
-      musicCloudinaryUrl: null, // New file needs Cloudinary upload on save
+      musicUrl: null, // New file needs upload on save
       musicName: file.name,
       musicUploadStatus: "idle",
       musicUploadError: undefined,
@@ -153,7 +153,7 @@ export function MusicStep({
     onChange({
       musicFile: null,
       musicPreviewUrl: null,
-      musicCloudinaryUrl: null,
+      musicUrl: null,
       musicName: null,
       musicUploadStatus: "idle",
       musicUploadError: undefined,

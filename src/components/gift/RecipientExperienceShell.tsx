@@ -54,7 +54,7 @@ export function RecipientExperienceShell({
 
   const themeConfig = getThemeConfig(gift.theme);
 
-  // Helper to determine active scene steps for progress bar
+  // Helper to determine active scene sequence for progress bar
   const validScenes: SceneKey[] = ["welcome"];
   if (gift.photos && gift.photos.length > 0) {
     validScenes.push("captured_memory");
@@ -63,14 +63,14 @@ export function RecipientExperienceShell({
     }
   }
   validScenes.push("cake");
-  if (gift.musicUrl && gift.musicUrl.trim().length > 0) {
-    validScenes.push("music");
-  }
   if (gift.letter && gift.letter.trim().length > 0) {
     validScenes.push("letter");
   }
   if (gift.wishes && gift.wishes.length > 0) {
     validScenes.push("wishes");
+  }
+  if (gift.musicUrl && gift.musicUrl.trim().length > 0) {
+    validScenes.push("music");
   }
   validScenes.push("final");
 
@@ -226,24 +226,6 @@ export function RecipientExperienceShell({
             </motion.div>
           )}
 
-          {currentScene === "music" && (
-            <motion.div
-              key="music"
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              transition={{ duration: 0.3 }}
-            >
-              <MusicScene
-                musicUrl={gift.musicUrl}
-                musicName={gift.musicName}
-                recipientName={gift.recipientName}
-                onNext={advanceScene}
-                themeConfig={themeConfig}
-              />
-            </motion.div>
-          )}
-
           {currentScene === "letter" && gift.letter && (
             <motion.div
               key="letter"
@@ -278,6 +260,24 @@ export function RecipientExperienceShell({
             </motion.div>
           )}
 
+          {currentScene === "music" && (
+            <motion.div
+              key="music"
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              transition={{ duration: 0.3 }}
+            >
+              <MusicScene
+                musicUrl={gift.musicUrl}
+                musicName={gift.musicName}
+                recipientName={gift.recipientName}
+                onNext={advanceScene}
+                themeConfig={themeConfig}
+              />
+            </motion.div>
+          )}
+
           {currentScene === "final" && (
             <motion.div
               key="final"
@@ -289,6 +289,8 @@ export function RecipientExperienceShell({
               <FinalRevealScene
                 recipientName={gift.recipientName}
                 message={gift.message}
+                musicUrl={gift.musicUrl}
+                musicName={gift.musicName}
                 onReplay={handleReplay}
                 themeConfig={themeConfig}
               />

@@ -1,6 +1,6 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { motion } from "framer-motion";
-import { PartyPopper, RotateCcw, PlusCircle } from "lucide-react";
+import { PartyPopper, RotateCcw, PlusCircle, Play, Pause, Disc, Music } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { fireCelebrationConfetti } from "@/lib/confetti";
@@ -9,6 +9,8 @@ import { ThemeConfig, getThemeConfig } from "@/lib/themeConfig";
 interface FinalRevealSceneProps {
   recipientName: string;
   message: string;
+  musicUrl?: string | null;
+  musicName?: string | null;
   onReplay: () => void;
   themeConfig?: ThemeConfig;
 }
@@ -16,15 +18,73 @@ interface FinalRevealSceneProps {
 export function FinalRevealScene({
   recipientName,
   message,
+  musicUrl,
+  musicName,
   onReplay,
   themeConfig,
 }: FinalRevealSceneProps) {
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [currentTime, setCurrentTime] = useState(0);
+  const [duration, setDuration] = useState(0);
+
+  const theme = themeConfig || getThemeConfig("sky-clouds");
+  const emojis = theme.floatingEmojis;
+
   useEffect(() => {
     fireCelebrationConfetti();
   }, []);
 
-  const theme = themeConfig || getThemeConfig("sky-clouds");
-  const emojis = theme.floatingEmojis;
+  // Handle Audio events & initial autoplay attempt on final reveal mount
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (!audio || !musicUrl) return;
+
+    const handleTimeUpdate = () => setCurrentTime(audio.currentTime);
+    const handleLoadedMetadata = () => setDuration(audio.duration || 0);
+    const handleEnded = () => setIsPlaying(false);
+
+    audio.addEventListener("timeupdate", handleTimeUpdate);
+    audio.addEventListener("loadedmetadata", handleLoadedMetadata);
+    audio.addEventListener("ended", handleEnded);
+
+    // Attempt autoplay if permitted by browser policy
+    audio
+      .play()
+      .then(() => setIsPlaying(true))
+      .catch((err) => {
+        // Autoplay restricted by browser — recipient can press Play button
+        setIsPlaying(false);
+      });
+
+    return () => {
+      audio.removeEventListener("timeupdate", handleTimeUpdate);
+      audio.removeEventListener("loadedmetadata", handleLoadedMetadata);
+      audio.removeEventListener("ended", handleEnded);
+    };
+  }, [musicUrl]);
+
+  const togglePlay = () => {
+    const audio = audioRef.current;
+    if (!audio) return;
+
+    if (isPlaying) {
+      audio.pause();
+      setIsPlaying(false);
+    } else {
+      audio
+        .play()
+        .then(() => setIsPlaying(true))
+        .catch((err) => console.warn("Audio playback error:", err));
+    }
+  };
+
+  const formatTime = (secs: number) => {
+    if (isNaN(secs) || secs < 0) return "0:00";
+    const m = Math.floor(secs / 60);
+    const s = Math.floor(secs % 60);
+    return `${m}:${s < 10 ? "0" : ""}${s}`;
+  };
 
   return (
     <div className={`relative min-h-[100svh] w-full flex flex-col justify-between items-center py-8 px-4 sm:px-6 ${theme.bgGradient} ${theme.titleText} overflow-hidden`}>
@@ -95,6 +155,67 @@ export function FinalRevealScene({
             </p>
           )}
         </div>
+
+        {/* Uploaded Birthday Soundtrack Player (If music exists) */}
+        {musicUrl && (
+          <div className={`${theme.cardBg} backdrop-blur-md p-5 sm:p-6 rounded-3xl border ${theme.cardBorder} ${theme.cardShadow} max-w-md w-full mb-6 text-center space-y-4 opacity-100`}>
+            <audio ref={audioRef} src={musicUrl} preload="auto" />
+
+            <div className="flex items-center justify-center gap-3">
+              <motion.div
+                animate={{ rotate: isPlaying ? 360 : 0 }}
+                transition={{ duration: 4, repeat: isPlaying ? Infinity : 0, ease: "linear" }}
+                className={`w-12 h-12 rounded-full ${theme.iconBg} ${theme.iconColor} flex items-center justify-center shadow-md shrink-0`}
+              >
+                <Disc className="w-6 h-6" />
+              </motion.div>
+              <div className="text-left truncate flex-1">
+                <div className={`text-xs font-bold ${theme.titleText} truncate flex items-center gap-1.5`}>
+                  <Music className={`w-3.5 h-3.5 ${theme.accentText} shrink-0`} />
+                  <span className="truncate">{musicName || "Birthday Soundtrack"}</span>
+                </div>
+                <div className={`text-[11px] ${theme.mutedText} font-mono mt-0.5`}>
+                  {formatTime(currentTime)} / {formatTime(duration)}
+                </div>
+              </div>
+            </div>
+
+            {/* Equalizer Spectrum Bars */}
+            <div className="flex items-center justify-center gap-1.5 h-5">
+              {[0.4, 0.9, 0.6, 1.0, 0.5, 0.8, 0.3].map((val, idx) => (
+                <motion.div
+                  key={idx}
+                  animate={{
+                    height: isPlaying ? [4, 20, 8, 22, 4] : 4,
+                  }}
+                  transition={{
+                    duration: 0.8,
+                    repeat: isPlaying ? Infinity : 0,
+                    delay: idx * 0.1,
+                  }}
+                  className={`w-1 rounded-full ${theme.iconBg}`}
+                />
+              ))}
+            </div>
+
+            {/* Play/Pause Button */}
+            <Button
+              size="lg"
+              onClick={togglePlay}
+              className={`w-full gap-2 text-sm py-4 ${theme.primaryBtnBg} ${theme.primaryBtnText} ${theme.primaryBtnShadow} font-semibold rounded-xl`}
+            >
+              {isPlaying ? (
+                <>
+                  <Pause className="w-4 h-4" /> Pause Song
+                </>
+              ) : (
+                <>
+                  <Play className="w-4 h-4" /> Play Song 🎵
+                </>
+              )}
+            </Button>
+          </div>
+        )}
 
         {/* Wish Banner */}
         <div className={`p-4 rounded-2xl ${theme.innerCardBg} border ${theme.innerCardBorder} text-xs sm:text-sm ${theme.accentText} font-semibold shadow-md max-w-md w-full mb-6 sm:mb-8`}>

@@ -12,11 +12,14 @@ interface RouteParams {
  * Transition gift status from DRAFT to PUBLISHED and return share URL
  */
 export async function POST(req: Request, { params }: RouteParams) {
+  const giftId = params?.id;
   try {
-    const { id } = params;
+    if (!giftId) {
+      return NextResponse.json({ error: "Gift ID parameter is required" }, { status: 400 });
+    }
 
     const gift = await prisma.gift.findUnique({
-      where: { id },
+      where: { id: giftId },
     });
 
     if (!gift) {
@@ -24,7 +27,7 @@ export async function POST(req: Request, { params }: RouteParams) {
     }
 
     const updatedGift = await prisma.gift.update({
-      where: { id },
+      where: { id: giftId },
       data: {
         status: "PUBLISHED",
       },
@@ -39,8 +42,8 @@ export async function POST(req: Request, { params }: RouteParams) {
         shareUrl: `/g/${updatedGift.slug}`,
       },
     });
-  } catch (error) {
-    console.error(`[POST /api/gifts/${params.id}/publish Error]:`, error);
+  } catch (error: any) {
+    console.error(`[POST /api/gifts/${giftId || "unknown"}/publish Error]:`, error);
     return NextResponse.json(
       { error: "Internal server error while publishing gift" },
       { status: 500 }

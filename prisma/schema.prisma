@@ -24,12 +24,15 @@ model Gift {
   recipientName String
   message       String
   letter        String?
-  theme         String   @default("dreamy") // dreamy, romantic, celebration
+  theme         String   @default("sky-clouds") // sky-clouds, festive-party, midnight-celebration
   pinHash       String?
   pinHint       String?
   status        String   @default("DRAFT") // DRAFT, PUBLISHED
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
+
+  musicUrl      String?
+  musicName     String?
 
   photos Photo[]
   wishes Wish[]

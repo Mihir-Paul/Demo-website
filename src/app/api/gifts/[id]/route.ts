@@ -14,11 +14,14 @@ interface RouteParams {
  * Fetch gift details by ID for builder / preview
  */
 export async function GET(req: Request, { params }: RouteParams) {
+  const giftId = params?.id;
   try {
-    const { id } = params;
+    if (!giftId) {
+      return NextResponse.json({ error: "Gift ID parameter is required" }, { status: 400 });
+    }
 
     const gift = await prisma.gift.findUnique({
-      where: { id },
+      where: { id: giftId },
       include: {
         photos: { orderBy: { order: "asc" } },
         wishes: { orderBy: { order: "asc" } },
@@ -38,7 +41,7 @@ export async function GET(req: Request, { params }: RouteParams) {
       },
     });
   } catch (error: any) {
-    console.error(`[GET /api/gifts/${params.id} Error]:`, error);
+    console.error(`[GET /api/gifts/${giftId || "unknown"} Error]:`, error);
     return NextResponse.json(
       {
         error: "Internal server error while fetching gift",
@@ -54,12 +57,15 @@ export async function GET(req: Request, { params }: RouteParams) {
  * Update an existing gift draft
  */
 export async function PUT(req: Request, { params }: RouteParams) {
+  const giftId = params?.id;
   try {
-    const { id } = params;
+    if (!giftId) {
+      return NextResponse.json({ error: "Gift ID parameter is required" }, { status: 400 });
+    }
     const body = await req.json();
 
     const existingGift = await prisma.gift.findUnique({
-      where: { id },
+      where: { id: giftId },
     });
 
     if (!existingGift) {
@@ -77,7 +83,7 @@ export async function PUT(req: Request, { params }: RouteParams) {
       );
     }
 
-    const { recipientName, message, letter, theme, pin, pinHint, photos, wishes } =
+    const { recipientName, message, letter, theme, pin, pinHint, musicUrl, musicName, photos, wishes } =
       validation.data;
 
     let pinHash = existingGift.pinHash;
@@ -88,14 +94,14 @@ export async function PUT(req: Request, { params }: RouteParams) {
     // Transaction to update gift and replace photos/wishes if provided
     const updatedGift = await prisma.$transaction(async (tx) => {
       if (photos !== undefined) {
-        await tx.photo.deleteMany({ where: { giftId: id } });
+        await tx.photo.deleteMany({ where: { giftId: giftId } });
       }
       if (wishes !== undefined) {
-        await tx.wish.deleteMany({ where: { giftId: id } });
+        await tx.wish.deleteMany({ where: { giftId: giftId } });
       }
 
       return tx.gift.update({
-        where: { id },
+        where: { id: giftId },
         data: {
           ...(recipientName !== undefined && { recipientName }),
           ...(message !== undefined && { message }),
@@ -103,6 +109,8 @@ export async function PUT(req: Request, { params }: RouteParams) {
           ...(theme !== undefined && { theme }),
           pinHash,
           ...(pinHint !== undefined && { pinHint }),
+          ...(musicUrl !== undefined && { musicUrl }),
+          ...(musicName !== undefined && { musicName }),
           photos: photos?.length
             ? {
                 create: photos.map((p, idx) => ({
@@ -138,7 +146,7 @@ export async function PUT(req: Request, { params }: RouteParams) {
       },
     });
   } catch (error: any) {
-    console.error(`[PUT /api/gifts/${params.id} Error]:`, error);
+    console.error(`[PUT /api/gifts/${giftId || "unknown"} Error]:`, error);
     return NextResponse.json(
       {
         error: "Internal server error while updating gift",

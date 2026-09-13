@@ -1,6 +1,5 @@
 import React from "react";
-import { Sparkles, Plus, Trash2, ArrowUp, ArrowDown } from "lucide-react";
-import { Card, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Plus, Trash2, ArrowUp, ArrowDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
@@ -39,25 +38,28 @@ export function WishesStep({ wishes, onChange }: WishesStepProps) {
   };
 
   return (
-    <Card className="p-6 sm:p-8 space-y-6">
-      <CardHeader className="p-0 border-b border-slate-800 pb-4">
+    <div className="space-y-6 opacity-100">
+      <div className="border-b border-slate-200 dark:border-[#29374A] pb-4">
         <div className="flex items-center justify-between">
-          <CardTitle className="flex items-center gap-2 text-emerald-400">
-            <Sparkles className="w-5 h-5" /> Add a few birthday wishes
-          </CardTitle>
-          <span className="text-xs font-mono text-slate-400">
+          <h2 className="text-2xl font-bold text-[#26364A] dark:text-[#F5F7FA] font-serif flex items-center gap-2.5">
+            <span className="w-9 h-9 rounded-xl bg-[#8E7CC3]/15 border border-[#8E7CC3]/30 text-[#8E7CC3] dark:bg-[#F1D9A6]/20 dark:border-[#F1D9A6]/40 dark:text-[#F1D9A6] flex items-center justify-center text-base shrink-0 shadow-sm">
+              ✨
+            </span>
+            Add a few birthday wishes
+          </h2>
+          <span className="text-xs font-mono text-[#26364A] dark:text-[#F5F7FA] bg-[#F7FBFF] dark:bg-[#182436] px-2.5 py-1 rounded-md border border-[#D7E8F5] dark:border-[#29374A]">
             {wishes.length}/{maxWishes} wishes
           </span>
         </div>
-        <CardDescription>
+        <p className="text-xs sm:text-sm text-[#60758D] dark:text-[#A8B6C8] mt-1.5 leading-relaxed font-normal">
           Add short bullet-point blessings or wishes for their upcoming year.
-        </CardDescription>
-      </CardHeader>
+        </p>
+      </div>
 
       <div className="space-y-3">
         {wishes.map((wish, index) => (
           <div key={index} className="flex items-center gap-2 group">
-            <span className="w-6 text-center text-xs font-bold text-emerald-400">
+            <span className="w-6 text-center text-xs font-bold text-[#1688D4] dark:text-[#F1D9A6]">
               #{index + 1}
             </span>
             <Input
@@ -71,7 +73,7 @@ export function WishesStep({ wishes, onChange }: WishesStepProps) {
                 type="button"
                 onClick={() => handleMoveWish(index, "up")}
                 disabled={index === 0}
-                className="p-1.5 text-slate-500 hover:text-white disabled:opacity-30"
+                className="p-1.5 text-slate-500 dark:text-slate-400 hover:text-[#26364A] dark:hover:text-white disabled:opacity-30"
                 title="Move Up"
               >
                 <ArrowUp className="w-3.5 h-3.5" />
@@ -80,7 +82,7 @@ export function WishesStep({ wishes, onChange }: WishesStepProps) {
                 type="button"
                 onClick={() => handleMoveWish(index, "down")}
                 disabled={index === wishes.length - 1}
-                className="p-1.5 text-slate-500 hover:text-white disabled:opacity-30"
+                className="p-1.5 text-slate-500 dark:text-slate-400 hover:text-[#26364A] dark:hover:text-white disabled:opacity-30"
                 title="Move Down"
               >
                 <ArrowDown className="w-3.5 h-3.5" />
@@ -88,7 +90,7 @@ export function WishesStep({ wishes, onChange }: WishesStepProps) {
               <button
                 type="button"
                 onClick={() => handleRemoveWish(index)}
-                className="p-1.5 text-slate-500 hover:text-rose-400"
+                className="p-1.5 text-slate-500 dark:text-slate-400 hover:text-rose-500"
                 title="Delete Wish"
               >
                 <Trash2 className="w-3.5 h-3.5" />
@@ -98,7 +100,7 @@ export function WishesStep({ wishes, onChange }: WishesStepProps) {
         ))}
 
         {wishes.length === 0 && (
-          <div className="text-center py-6 border border-dashed border-slate-800 rounded-xl text-xs text-slate-500">
+          <div className="text-center py-6 border border-dashed border-[#D7E8F5] dark:border-[#29374A] rounded-xl text-xs text-[#60758D] dark:text-[#A8B6C8]">
             No wishes added yet. Click below to add your first wish!
           </div>
         )}
@@ -108,12 +110,12 @@ export function WishesStep({ wishes, onChange }: WishesStepProps) {
             type="button"
             variant="outline"
             onClick={handleAddWish}
-            className="w-full gap-2 text-xs py-3 border-dashed border-slate-700"
+            className="w-full gap-2 text-xs py-3 border-dashed border-[#1688D4]/40 hover:border-[#1688D4] dark:border-[#A99AF4]/40 dark:hover:border-[#A99AF4]"
           >
             <Plus className="w-4 h-4" /> Add Wish
           </Button>
         )}
       </div>
-    </Card>
+    </div>
   );
 }

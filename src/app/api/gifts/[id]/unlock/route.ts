@@ -14,8 +14,11 @@ interface RouteParams {
  * Verify PIN for protected gift
  */
 export async function POST(req: Request, { params }: RouteParams) {
+  const giftId = params?.id;
   try {
-    const { id } = params;
+    if (!giftId) {
+      return NextResponse.json({ error: "Gift ID parameter is required" }, { status: 400 });
+    }
     const body = await req.json();
 
     const validation = UnlockGiftSchema.safeParse(body);
@@ -27,7 +30,7 @@ export async function POST(req: Request, { params }: RouteParams) {
     }
 
     const gift = await prisma.gift.findUnique({
-      where: { id },
+      where: { id: giftId },
       select: {
         id: true,
         pinHash: true,
@@ -58,8 +61,8 @@ export async function POST(req: Request, { params }: RouteParams) {
       message: "PIN verified successfully",
       unlocked: true,
     });
-  } catch (error) {
-    console.error(`[POST /api/gifts/${params.id}/unlock Error]:`, error);
+  } catch (error: any) {
+    console.error(`[POST /api/gifts/${giftId || "unknown"}/unlock Error]:`, error);
     return NextResponse.json(
       { error: "Internal server error while unlocking gift" },
       { status: 500 }

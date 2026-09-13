@@ -1,6 +1,5 @@
 import React from "react";
-import { CheckCircle, Heart, Camera, MessageSquare, Sparkles, Palette, Lock, ArrowLeft, Eye, Save } from "lucide-react";
-import { Card, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Gift, Camera, MessageSquare, Sparkles, Palette, Lock, ArrowLeft, Eye, Save } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { GiftBuilderState } from "@/types/gift";
 
@@ -20,150 +19,184 @@ export function ReviewStep({
   isSaving,
 }: ReviewStepProps) {
   const themeLabels: Record<string, string> = {
-    dreamy: "Dreamy Atmosphere",
-    romantic: "Romantic Rose",
-    celebration: "Festive Celebration",
+    "sky-clouds": "Sky Clouds ☁️",
+    "festive-party": "Festive Party 🎉",
+    "midnight-celebration": "Midnight Celebration ✨",
   };
 
-  return (
-    <Card className="p-6 sm:p-8 space-y-6">
-      <CardHeader className="p-0 border-b border-slate-800 pb-4">
-        <CardTitle className="flex items-center gap-2 text-rose-400">
-          <CheckCircle className="w-5 h-5" /> Your surprise is ready
-        </CardTitle>
-        <CardDescription>
-          Review your gift details below before previewing or saving your draft.
-        </CardDescription>
-      </CardHeader>
+  const hasMusic = Boolean(
+    state.musicName ||
+      state.musicCloudinaryUrl ||
+      state.musicFile ||
+      state.musicPreviewUrl
+  );
 
-      {/* Summary Grid */}
+  const hasPhotos = state.photos.length > 0;
+
+  return (
+    <div className="space-y-6 opacity-100">
+      <div className="border-b border-slate-200 dark:border-[#29374A] pb-4">
+        <h2 className="text-2xl font-bold text-[#26364A] dark:text-[#F5F7FA] font-serif flex items-center gap-2.5">
+          <span className="w-9 h-9 rounded-xl bg-[#1688D4]/15 border border-[#1688D4]/30 text-[#1688D4] dark:bg-[#A99AF4]/20 dark:border-[#A99AF4]/40 dark:text-[#A99AF4] flex items-center justify-center text-base shrink-0 shadow-sm">
+            🎉
+          </span>
+          Your surprise is ready!
+        </h2>
+        <p className="text-xs sm:text-sm text-[#60758D] dark:text-[#A8B6C8] mt-1.5 leading-relaxed font-normal">
+          Review your birthday gift details below before previewing or saving your draft.
+        </p>
+      </div>
+
+      {/* Summary Grid with Solid Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         {/* Recipient */}
-        <div className="p-4 rounded-xl bg-slate-900/60 border border-slate-800 space-y-1 relative">
+        <div className="p-4 rounded-2xl bg-[#F7FBFF] border border-[#D7E8F5] dark:bg-[#172235] dark:border-[#29374A] space-y-1.5 opacity-100 shadow-sm">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-rose-300 flex items-center gap-1.5">
-              <Heart className="w-3.5 h-3.5 text-rose-400" /> Recipient
+            <span className="text-[10px] uppercase font-bold tracking-wider text-[#1688D4] dark:text-[#8FAED8] flex items-center gap-1.5">
+              <Gift className="w-3.5 h-3.5 text-[#1688D4] dark:text-[#8FAED8]" /> Recipient
             </span>
             <button
               type="button"
               onClick={() => onEditStep(1)}
-              className="text-[11px] text-slate-400 hover:text-white underline"
+              className="text-[11px] text-[#1688D4] dark:text-[#A99AF4] font-semibold hover:underline"
             >
               Edit
             </button>
           </div>
-          <p className="font-serif font-bold text-base text-white">
-            {state.recipientName || "—"}
+          <p className="font-serif font-bold text-base text-[#26364A] dark:text-[#F5F7FA]">
+            {state.recipientName.trim() || "No recipient name yet"}
           </p>
-          <p className="text-xs text-slate-400 italic line-clamp-1">
-            "{state.message || "—"}"
+          <p className="text-xs text-[#60758D] dark:text-[#A8B6C8] italic line-clamp-1">
+            {state.message.trim() ? `"${state.message.trim()}"` : "No message added"}
           </p>
         </div>
 
         {/* Memories */}
-        <div className="p-4 rounded-xl bg-slate-900/60 border border-slate-800 space-y-1">
+        <div className="p-4 rounded-2xl bg-[#F7FBFF] border border-[#D7E8F5] dark:bg-[#172235] dark:border-[#29374A] space-y-1.5 opacity-100 shadow-sm">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-amber-300 flex items-center gap-1.5">
-              <Camera className="w-3.5 h-3.5 text-amber-400" /> Memories
+            <span className="text-[10px] uppercase font-bold tracking-wider text-[#8E7CC3] dark:text-[#F1D9A6] flex items-center gap-1.5">
+              <Camera className="w-3.5 h-3.5 text-[#8E7CC3] dark:text-[#F1D9A6]" /> Memories
             </span>
             <button
               type="button"
               onClick={() => onEditStep(2)}
-              className="text-[11px] text-slate-400 hover:text-white underline"
+              className="text-[11px] text-[#1688D4] dark:text-[#A99AF4] font-semibold hover:underline"
             >
               Edit
             </button>
           </div>
-          <p className="font-serif font-bold text-base text-white">
-            {state.photos.length} photos added
+          <p className="font-serif font-bold text-base text-[#26364A] dark:text-[#F5F7FA]">
+            {hasPhotos ? `${state.photos.length} photo${state.photos.length > 1 ? "s" : ""} added` : "No photos added"}
           </p>
-          <p className="text-xs text-slate-400">
-            {state.photos.length > 0 ? "Photo gallery story ready" : "No photos attached"}
+          <p className="text-xs text-[#60758D] dark:text-[#A8B6C8]">
+            {hasPhotos ? "Photo memory gallery ready" : "No photos added"}
           </p>
         </div>
 
-        {/* Letter */}
-        <div className="p-4 rounded-xl bg-slate-900/60 border border-slate-800 space-y-1">
+        {/* Soundtrack */}
+        <div className="p-4 rounded-2xl bg-[#F7FBFF] border border-[#D7E8F5] dark:bg-[#172235] dark:border-[#29374A] space-y-1.5 opacity-100 shadow-sm">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-pink-300 flex items-center gap-1.5">
-              <MessageSquare className="w-3.5 h-3.5 text-pink-400" /> Personal Letter
+            <span className="text-[10px] uppercase font-bold tracking-wider text-[#1688D4] dark:text-[#8FAED8] flex items-center gap-1.5">
+              <Sparkles className="w-3.5 h-3.5 text-[#1688D4] dark:text-[#8FAED8]" /> Soundtrack
             </span>
             <button
               type="button"
               onClick={() => onEditStep(3)}
-              className="text-[11px] text-slate-400 hover:text-white underline"
+              className="text-[11px] text-[#1688D4] dark:text-[#A99AF4] font-semibold hover:underline"
             >
               Edit
             </button>
           </div>
-          <p className="font-serif font-bold text-base text-white">
-            {state.letter ? `${state.letter.length} characters` : "None"}
+          <p className="font-serif font-bold text-base text-[#26364A] dark:text-[#F5F7FA] truncate">
+            {hasMusic ? (state.musicName || "Custom song attached") : "No soundtrack selected"}
           </p>
-          <p className="text-xs text-slate-400">
-            {state.letter ? "Heartfelt note ready" : "No letter added"}
+          <p className="text-xs text-[#60758D] dark:text-[#A8B6C8]">
+            {hasMusic ? "Music uploaded successfully" : "No music uploaded"}
           </p>
         </div>
 
-        {/* Wishes */}
-        <div className="p-4 rounded-xl bg-slate-900/60 border border-slate-800 space-y-1">
+        {/* Letter */}
+        <div className="p-4 rounded-2xl bg-[#F7FBFF] border border-[#D7E8F5] dark:bg-[#172235] dark:border-[#29374A] space-y-1.5 opacity-100 shadow-sm">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-emerald-300 flex items-center gap-1.5">
-              <Sparkles className="w-3.5 h-3.5 text-emerald-400" /> Wishes
+            <span className="text-[10px] uppercase font-bold tracking-wider text-[#E85D83] dark:text-[#E7A6B7] flex items-center gap-1.5">
+              <MessageSquare className="w-3.5 h-3.5 text-[#E85D83] dark:text-[#E7A6B7]" /> Birthday Note
             </span>
             <button
               type="button"
               onClick={() => onEditStep(4)}
-              className="text-[11px] text-slate-400 hover:text-white underline"
+              className="text-[11px] text-[#1688D4] dark:text-[#A99AF4] font-semibold hover:underline"
             >
               Edit
             </button>
           </div>
-          <p className="font-serif font-bold text-base text-white">
-            {state.wishes.length} wishes added
+          <p className="font-serif font-bold text-base text-[#26364A] dark:text-[#F5F7FA]">
+            {state.letter?.trim() ? `${state.letter.trim().length} characters` : "No birthday note added"}
           </p>
-          <p className="text-xs text-slate-400">
-            {state.wishes.length > 0 ? "Blessings attached" : "No wishes added"}
+          <p className="text-xs text-[#60758D] dark:text-[#A8B6C8]">
+            {state.letter?.trim() ? "Special note attached" : "No birthday note added"}
           </p>
         </div>
 
-        {/* Theme */}
-        <div className="p-4 rounded-xl bg-slate-900/60 border border-slate-800 space-y-1">
+        {/* Wishes */}
+        <div className="p-4 rounded-2xl bg-[#F7FBFF] border border-[#D7E8F5] dark:bg-[#172235] dark:border-[#29374A] space-y-1.5 opacity-100 shadow-sm">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-purple-300 flex items-center gap-1.5">
-              <Palette className="w-3.5 h-3.5 text-purple-400" /> Theme
+            <span className="text-[10px] uppercase font-bold tracking-wider text-[#8E7CC3] dark:text-[#F1D9A6] flex items-center gap-1.5">
+              <Sparkles className="w-3.5 h-3.5 text-[#8E7CC3] dark:text-[#F1D9A6]" /> Wishes
             </span>
             <button
               type="button"
               onClick={() => onEditStep(5)}
-              className="text-[11px] text-slate-400 hover:text-white underline"
+              className="text-[11px] text-[#1688D4] dark:text-[#A99AF4] font-semibold hover:underline"
             >
               Edit
             </button>
           </div>
-          <p className="font-serif font-bold text-base text-white capitalize">
+          <p className="font-serif font-bold text-base text-[#26364A] dark:text-[#F5F7FA]">
+            {state.wishes.length > 0 ? `${state.wishes.length} wishes added` : "No wishes added"}
+          </p>
+          <p className="text-xs text-[#60758D] dark:text-[#A8B6C8]">
+            {state.wishes.length > 0 ? "Birthday blessings attached" : "No wishes added"}
+          </p>
+        </div>
+
+        {/* Theme */}
+        <div className="p-4 rounded-2xl bg-[#F7FBFF] border border-[#D7E8F5] dark:bg-[#172235] dark:border-[#29374A] space-y-1.5 opacity-100 shadow-sm">
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] uppercase font-bold tracking-wider text-[#1688D4] dark:text-[#A99AF4] flex items-center gap-1.5">
+              <Palette className="w-3.5 h-3.5 text-[#1688D4] dark:text-[#A99AF4]" /> Theme
+            </span>
+            <button
+              type="button"
+              onClick={() => onEditStep(6)}
+              className="text-[11px] text-[#1688D4] dark:text-[#A99AF4] font-semibold hover:underline"
+            >
+              Edit
+            </button>
+          </div>
+          <p className="font-serif font-bold text-base text-[#26364A] dark:text-[#F5F7FA]">
             {themeLabels[state.theme] || state.theme}
           </p>
         </div>
 
         {/* PIN */}
-        <div className="p-4 rounded-xl bg-slate-900/60 border border-slate-800 space-y-1">
+        <div className="p-4 rounded-2xl bg-[#F7FBFF] border border-[#D7E8F5] dark:bg-[#172235] dark:border-[#29374A] space-y-1.5 sm:col-span-2 opacity-100 shadow-sm">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-rose-300 flex items-center gap-1.5">
-              <Lock className="w-3.5 h-3.5 text-rose-400" /> Passcode PIN
+            <span className="text-[10px] uppercase font-bold tracking-wider text-[#1688D4] dark:text-[#8FAED8] flex items-center gap-1.5">
+              <Lock className="w-3.5 h-3.5 text-[#1688D4] dark:text-[#8FAED8]" /> Secret PIN
             </span>
             <button
               type="button"
-              onClick={() => onEditStep(6)}
-              className="text-[11px] text-slate-400 hover:text-white underline"
+              onClick={() => onEditStep(7)}
+              className="text-[11px] text-[#1688D4] dark:text-[#A99AF4] font-semibold hover:underline"
             >
               Edit
             </button>
           </div>
-          <p className="font-serif font-bold text-base text-white">
-            {state.pin ? "•••• Configured" : "None"}
+          <p className="font-serif font-bold text-base text-[#26364A] dark:text-[#F5F7FA]">
+            {state.pin ? "•••• Passcode Configured" : "None"}
           </p>
           {state.pinHint && (
-            <p className="text-xs text-slate-400 italic">Hint: "{state.pinHint}"</p>
+            <p className="text-xs text-[#60758D] dark:text-[#A8B6C8] italic">Hint: "{state.pinHint}"</p>
           )}
         </div>
       </div>
@@ -173,8 +206,8 @@ export function ReviewStep({
         <Button
           type="button"
           variant="ghost"
-          onClick={() => onEditStep(6)}
-          className="w-full sm:w-auto gap-2"
+          onClick={() => onEditStep(7)}
+          className="w-full sm:w-auto gap-2 text-[#26364A] dark:text-[#F5F7FA]"
         >
           <ArrowLeft className="w-4 h-4" /> Edit Details
         </Button>
@@ -195,12 +228,12 @@ export function ReviewStep({
             variant="primary"
             onClick={onPreview}
             disabled={isSaving}
-            className="w-full sm:w-auto gap-2 shadow-xl shadow-rose-500/30"
+            className="w-full sm:w-auto gap-2"
           >
             <Eye className="w-4 h-4" /> Preview Surprise
           </Button>
         </div>
       </div>
-    </Card>
+    </div>
   );
 }

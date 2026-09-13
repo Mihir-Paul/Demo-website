@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 export type GiftStatus = "DRAFT" | "PUBLISHED";
-export type GiftTheme = "dreamy" | "romantic" | "celebration";
+export type GiftTheme = "sky-clouds" | "festive-party" | "midnight-celebration";
 
 export interface PhotoInput {
   id?: string;
@@ -20,8 +20,11 @@ export interface GiftPhotoDraft {
   id: string;
   file?: File;
   previewUrl: string;
+  cloudinaryUrl?: string;
   caption: string;
   order: number;
+  uploadStatus: "pending" | "uploading" | "uploaded" | "error";
+  uploadError?: string;
 }
 
 export interface GiftBuilderState {
@@ -33,6 +36,14 @@ export interface GiftBuilderState {
   theme: GiftTheme;
   pin: string;
   pinHint: string;
+
+  // Local music state
+  musicFile?: File | null;
+  musicPreviewUrl?: string | null;
+  musicCloudinaryUrl?: string | null;
+  musicName?: string | null;
+  musicUploadStatus?: "idle" | "uploading" | "uploaded" | "error";
+  musicUploadError?: string;
 }
 
 export interface CreateGiftInput {
@@ -42,6 +53,8 @@ export interface CreateGiftInput {
   theme?: string;
   pin?: string;
   pinHint?: string;
+  musicUrl?: string | null;
+  musicName?: string | null;
   photos?: PhotoInput[];
   wishes?: WishInput[];
 }
@@ -51,9 +64,11 @@ export const CreateGiftSchema = z.object({
   recipientName: z.string().trim().min(1, "Recipient name is required").max(100),
   message: z.string().trim().min(1, "Main message is required").max(300),
   letter: z.string().max(3000, "Letter cannot exceed 3000 characters").optional(),
-  theme: z.enum(["dreamy", "romantic", "celebration"]).default("dreamy"),
+  theme: z.enum(["sky-clouds", "festive-party", "midnight-celebration"]).default("sky-clouds"),
   pin: z.string().regex(/^\d{4}$/, "PIN must be exactly 4 numeric digits").optional().or(z.literal("")),
   pinHint: z.string().max(100).optional(),
+  musicUrl: z.string().nullable().optional(),
+  musicName: z.string().nullable().optional(),
   photos: z
     .array(
       z.object({

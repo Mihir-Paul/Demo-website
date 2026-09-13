@@ -5,25 +5,20 @@ import { useParams } from "next/navigation";
 import Link from "next/link";
 import {
   Sparkles,
-  Gift,
   Share2,
-  Lock,
-  Eye,
-  CheckCircle2,
   Copy,
   ArrowLeft,
-  Heart,
-  Camera,
-  MessageSquare,
+  CheckCircle2,
+  Eye,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
+import { RecipientExperienceShell, GiftData } from "@/components/gift/RecipientExperienceShell";
 
 export default function PreviewSurprisePage() {
   const params = useParams();
   const id = params?.id as string;
 
-  const [gift, setGift] = useState<any>(null);
+  const [gift, setGift] = useState<GiftData & { status?: string } | null>(null);
   const [loading, setLoading] = useState(true);
   const [publishing, setPublishing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -37,11 +32,11 @@ export default function PreviewSurprisePage() {
       setGift({
         id: "test-id",
         slug: "demo-sarah",
-        recipientName: "Shalini",
-        message: "Happy Birthday! ❤️ Wishing you the happiest day ever!",
+        recipientName: "Birthday Star",
+        message: "Wishing you the happiest birthday ever! May your year ahead be full of magic, laughter, and joy!",
         letter:
-          "Dear Shalini,\n\nI wanted to make something special for your birthday to remind you of how much you mean to everyone around you...",
-        theme: "dreamy",
+          "Happy Birthday!\n\nI wanted to create something truly special for your birthday to remind you of how wonderful you are...\n\nThank you for bringing so much light into all of our lives. Here's to another amazing year!",
+        theme: "sky-clouds",
         hasPin: true,
         pinHint: "Something only we know",
         status: "DRAFT",
@@ -49,13 +44,18 @@ export default function PreviewSurprisePage() {
           {
             id: "p1",
             url: "https://images.unsplash.com/photo-1513151233558-d860c5398176?q=80&w=800",
-            caption: "Unforgettable memories together!",
+            caption: "Unforgettable birthday moments!",
+          },
+          {
+            id: "p2",
+            url: "https://images.unsplash.com/photo-1464349095431-e9a21285b5f3?q=80&w=800",
+            caption: "Celebrations & good times ✨",
           },
         ],
         wishes: [
-          { id: "w1", text: "More adventures together ✈️" },
-          { id: "w2", text: "Endless reasons to smile ❤️" },
-          { id: "w3", text: "Your best year yet ✨" },
+          { id: "w1", text: "Endless joy and laughter all year round 🌟" },
+          { id: "w2", text: "New adventures and wonderful memories ✈️" },
+          { id: "w3", text: "Your happiest and brightest year yet ✨" },
         ],
       });
       setLoading(false);
@@ -89,7 +89,8 @@ export default function PreviewSurprisePage() {
 
     try {
       if (id === "test" || id === "demo") {
-        setShareUrl(`${window.location.origin}/g/demo-sarah`);
+        const url = `${window.location.origin}/g/demo-sarah`;
+        setShareUrl(url);
         setGift({ ...gift, status: "PUBLISHED" });
         return;
       }
@@ -119,18 +120,12 @@ export default function PreviewSurprisePage() {
     setTimeout(() => setCopied(false), 2500);
   };
 
-  const themeGradients: Record<string, string> = {
-    dreamy: "from-purple-600/30 to-pink-600/30 border-purple-500/30",
-    romantic: "from-rose-600/30 to-red-600/30 border-rose-500/30",
-    celebration: "from-amber-500/30 to-rose-500/30 border-amber-500/30",
-  };
-
   if (loading) {
     return (
-      <div className="min-h-screen bg-midnight-950 flex items-center justify-center text-slate-400">
+      <div className="min-h-screen bg-sky-50 flex items-center justify-center text-slate-600">
         <div className="flex items-center gap-3">
-          <Sparkles className="w-6 h-6 animate-spin text-rose-400" />
-          <span>Loading Surprise Preview...</span>
+          <Sparkles className="w-6 h-6 animate-spin text-sky-500" />
+          <span className="font-serif font-medium">Loading Birthday Experience...</span>
         </div>
       </div>
     );
@@ -138,10 +133,10 @@ export default function PreviewSurprisePage() {
 
   if (error || !gift) {
     return (
-      <div className="min-h-screen bg-midnight-950 flex flex-col items-center justify-center p-6 text-center">
-        <div className="glass-card p-8 rounded-2xl max-w-md">
-          <h2 className="text-xl font-serif text-rose-400 mb-2">Preview Error</h2>
-          <p className="text-xs text-slate-400 mb-6">{error || "Gift not found"}</p>
+      <div className="min-h-screen bg-sky-50 flex flex-col items-center justify-center p-6 text-center">
+        <div className="bg-white/80 backdrop-blur-md p-8 rounded-2xl shadow-xl max-w-md border border-sky-100">
+          <h2 className="text-xl font-serif text-slate-800 mb-2">Preview Error</h2>
+          <p className="text-xs text-slate-500 mb-6">{error || "Gift not found"}</p>
           <Link href="/create">
             <Button variant="primary">Create New Surprise</Button>
           </Link>
@@ -151,180 +146,82 @@ export default function PreviewSurprisePage() {
   }
 
   return (
-    <div className="relative min-h-screen bg-midnight-950 text-slate-100 py-8 px-4 sm:px-6">
-      <div className="ambient-glow-pink top-[10%] left-[20%] opacity-30" />
-
-      <div className="relative z-10 mx-auto max-w-4xl space-y-8">
-        {/* Preview Top Header Bar */}
-        <div className="glass-card p-6 rounded-2xl border-rose-500/30 flex flex-col md:flex-row items-center justify-between gap-4">
-          <div className="flex items-center gap-3 text-left">
-            <div className="w-10 h-10 rounded-xl bg-rose-500/20 border border-rose-500/30 flex items-center justify-center text-rose-400">
-              <Eye className="w-5 h-5" />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="font-serif font-bold text-lg text-white">
-                  Preview Mode: Surprise for {gift.recipientName}
-                </span>
-                <span
-                  className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider ${
-                    gift.status === "PUBLISHED"
-                      ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/30"
-                      : "bg-amber-500/20 text-amber-300 border border-amber-500/30"
-                  }`}
-                >
-                  {gift.status}
-                </span>
-              </div>
-              <p className="text-xs text-slate-400">
-                This is how your surprise will feel to the recipient.
-              </p>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-3 w-full md:w-auto justify-end">
-            <Link href={`/create?draftId=${gift.id}`}>
-              <Button variant="ghost" size="sm" className="gap-2">
-                <ArrowLeft className="w-4 h-4" /> Edit Details
-              </Button>
-            </Link>
-
-            {gift.status !== "PUBLISHED" ? (
-              <Button
-                variant="primary"
-                size="sm"
-                onClick={handlePublish}
-                disabled={publishing}
-                className="gap-2 shadow-lg shadow-rose-500/25"
-              >
-                <Sparkles className="w-4 h-4" />{" "}
-                {publishing ? "Publishing..." : "Publish Surprise"}
-              </Button>
-            ) : (
-              <Link href={`/g/${gift.slug}`}>
-                <Button variant="outline" size="sm" className="gap-2">
-                  <Share2 className="w-4 h-4" /> Open Recipient Link
-                </Button>
-              </Link>
-            )}
-          </div>
+    <div className="relative min-h-screen">
+      {/* Unobtrusive Floating Creator Preview Controls */}
+      <div className="fixed top-4 left-4 right-4 z-50 pointer-events-none flex items-center justify-between gap-2 max-w-5xl mx-auto">
+        {/* Left Badge */}
+        <div className="pointer-events-auto bg-slate-900/85 backdrop-blur-md text-slate-100 px-3 py-1.5 rounded-full shadow-lg border border-slate-700/60 flex items-center gap-2 text-xs font-semibold">
+          <Eye className="w-3.5 h-3.5 text-sky-400" />
+          <span>PREVIEW</span>
+          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
         </div>
 
-        {/* Shareable Link Banner (If Published) */}
-        {shareUrl && (
-          <div className="glass-card p-6 rounded-2xl border-emerald-500/40 bg-emerald-500/5 space-y-3">
-            <div className="flex items-center gap-2 text-emerald-400 font-semibold text-sm">
-              <CheckCircle2 className="w-5 h-5" /> Surprise Published & Ready to Share!
+        {/* Right Floating Actions */}
+        <div className="pointer-events-auto flex items-center gap-2">
+          <Link href={`/create?draftId=${gift.id}`}>
+            <Button
+              variant="outline"
+              size="sm"
+              className="bg-white/90 backdrop-blur-md hover:bg-white text-slate-700 border-sky-200 shadow-md text-xs gap-1.5 rounded-full"
+            >
+              <ArrowLeft className="w-3.5 h-3.5" /> Edit
+            </Button>
+          </Link>
+
+          {gift.status !== "PUBLISHED" ? (
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={handlePublish}
+              disabled={publishing}
+              className="bg-sky-600 hover:bg-sky-700 text-white shadow-md text-xs gap-1.5 rounded-full"
+            >
+              <Sparkles className="w-3.5 h-3.5" />
+              {publishing ? "Publishing..." : "Publish"}
+            </Button>
+          ) : (
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={handleCopyLink}
+              className="bg-emerald-600 hover:bg-emerald-700 text-white shadow-md text-xs gap-1.5 rounded-full"
+            >
+              {copied ? <CheckCircle2 className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+              {copied ? "Copied!" : "Copy Share Link"}
+            </Button>
+          )}
+        </div>
+      </div>
+
+      {/* Published Share Toast Banner */}
+      {shareUrl && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 w-full max-w-lg px-4">
+          <div className="bg-slate-900/90 backdrop-blur-md text-white p-4 rounded-2xl shadow-2xl border border-slate-700/80 space-y-2 text-center">
+            <div className="flex items-center justify-center gap-2 text-emerald-400 text-xs font-bold">
+              <CheckCircle2 className="w-4 h-4" /> Birthday Surprise is Live & Published!
             </div>
-            <p className="text-xs text-slate-300">
-              Send this link to {gift.recipientName}:
-            </p>
             <div className="flex items-center gap-2">
               <input
                 type="text"
                 readOnly
                 value={shareUrl}
-                className="w-full rounded-xl bg-slate-950 px-4 py-2.5 text-xs text-slate-200 border border-slate-800 font-mono"
+                className="w-full rounded-xl bg-slate-950 px-3 py-1.5 text-[11px] text-slate-300 border border-slate-800 font-mono"
               />
-              <Button variant="primary" size="sm" onClick={handleCopyLink} className="gap-1.5 shrink-0">
-                <Copy className="w-4 h-4" /> {copied ? "Copied!" : "Copy Link"}
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={handleCopyLink}
+                className="bg-emerald-500 hover:bg-emerald-600 text-white text-xs shrink-0 rounded-xl"
+              >
+                {copied ? "Copied!" : "Copy"}
               </Button>
             </div>
           </div>
-        )}
-
-        {/* Live Recipient Card Container */}
-        <div
-          className={`mx-auto max-w-md rounded-3xl border bg-gradient-to-b ${
-            themeGradients[gift.theme] || themeGradients.dreamy
-          } bg-midnight-950 shadow-2xl overflow-hidden p-6 sm:p-8 space-y-6 relative`}
-        >
-          {/* Header */}
-          <div className="text-center space-y-3">
-            <div className="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-gradient-to-tr from-rose-500 to-pink-500 shadow-lg shadow-rose-500/40 text-white">
-              <Gift className="w-6 h-6" />
-            </div>
-            <h2 className="font-serif text-2xl font-bold text-white">
-              Happy Birthday, {gift.recipientName}! 🎉
-            </h2>
-            <p className="text-xs text-slate-200 leading-relaxed italic">
-              "{gift.message}"
-            </p>
-          </div>
-
-          {/* Letter */}
-          {gift.letter && (
-            <Card className="p-5 rounded-2xl bg-slate-900/80 border-slate-800">
-              <div className="flex items-center gap-2 text-xs font-semibold text-rose-300 mb-2">
-                <Heart className="w-4 h-4 text-rose-400" /> Personal Note
-              </div>
-              <p className="text-xs text-slate-200 leading-relaxed whitespace-pre-wrap font-serif">
-                {gift.letter}
-              </p>
-            </Card>
-          )}
-
-          {/* Photo Gallery */}
-          {gift.photos && gift.photos.length > 0 && (
-            <div className="space-y-3">
-              <div className="flex items-center gap-2 text-xs font-semibold text-amber-300">
-                <Camera className="w-4 h-4 text-amber-400" /> Photo Memories
-              </div>
-              {gift.photos.map((photo: any, index: number) => (
-                <div
-                  key={photo.id || index}
-                  className="rounded-2xl overflow-hidden border border-slate-800 bg-slate-950"
-                >
-                  {photo.url ? (
-                    <img
-                      src={photo.url}
-                      alt={photo.caption || "Memory"}
-                      className="w-full h-48 object-cover"
-                    />
-                  ) : null}
-                  {photo.caption && (
-                    <div className="p-3 text-xs text-slate-300 italic text-center">
-                      {photo.caption}
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
-
-          {/* Birthday Wishes */}
-          {gift.wishes && gift.wishes.length > 0 && (
-            <div className="space-y-2">
-              <div className="flex items-center gap-2 text-xs font-semibold text-emerald-300 mb-1">
-                <Sparkles className="w-4 h-4 text-emerald-400" /> Special Wishes
-              </div>
-              <ul className="space-y-2">
-                {gift.wishes.map((wish: any, index: number) => (
-                  <li
-                    key={wish.id || index}
-                    className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-xs text-slate-200 flex items-start gap-2"
-                  >
-                    <span className="text-emerald-400 font-bold">•</span>
-                    <span>{wish.text}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-
-          {/* Passcode Security */}
-          {gift.hasPin && (
-            <div className="flex flex-col items-center justify-center text-[11px] text-slate-400 pt-2 border-t border-slate-800/80 gap-1">
-              <div className="flex items-center gap-1.5 text-slate-300 font-semibold">
-                <Lock className="w-3.5 h-3.5 text-rose-400" /> Protected Experience
-              </div>
-              {gift.pinHint && (
-                <span className="italic">Hint: "{gift.pinHint}"</span>
-              )}
-            </div>
-          )}
         </div>
-      </div>
+      )}
+
+      {/* Full Viewport Recipient Birthday Experience */}
+      <RecipientExperienceShell gift={gift} isUnlockedDefault={true} />
     </div>
   );
 }

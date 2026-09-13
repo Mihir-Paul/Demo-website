@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowLeft, ArrowRight, Save, Eye } from "lucide-react";
+import { ArrowLeft, ArrowRight, Save } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { BuilderProgress } from "./BuilderProgress";
 import { RecipientStep } from "./RecipientStep";
@@ -13,18 +13,22 @@ import { WishesStep } from "./WishesStep";
 import { ThemeStep } from "./ThemeStep";
 import { PinStep } from "./PinStep";
 import { ReviewStep } from "./ReviewStep";
+import { MusicStep } from "./MusicStep";
 import { GiftBuilderState, GiftPhotoDraft } from "@/types/gift";
+import { uploadFileToCloudinary } from "@/lib/cloudinary";
+import { safeFetchJson } from "@/lib/utils";
 
 const LOCAL_STORAGE_KEY = "joycraft_gift_builder_draft";
 
 const STEPS = [
   { number: 1, label: "Recipient" },
   { number: 2, label: "Memories" },
-  { number: 3, label: "Letter" },
-  { number: 4, label: "Wishes" },
-  { number: 5, label: "Theme" },
-  { number: 6, label: "Secret PIN" },
-  { number: 7, label: "Review" },
+  { number: 3, label: "Soundtrack" },
+  { number: 4, label: "Letter" },
+  { number: 5, label: "Wishes" },
+  { number: 6, label: "Theme" },
+  { number: 7, label: "Secret PIN" },
+  { number: 8, label: "Review" },
 ];
 
 const DEFAULT_STATE: GiftBuilderState = {
@@ -32,13 +36,15 @@ const DEFAULT_STATE: GiftBuilderState = {
   message: "",
   photos: [],
   letter: "",
-  wishes: [
-    "Wishing you a year filled with love and laughter! 🎉",
-    "May all your big dreams take flight today! ✨",
-  ],
-  theme: "dreamy",
+  wishes: [],
+  theme: "sky-clouds",
   pin: "",
   pinHint: "",
+  musicFile: null,
+  musicPreviewUrl: null,
+  musicCloudinaryUrl: null,
+  musicName: null,
+  musicUploadStatus: "idle",
 };
 
 export function GiftBuilderShell() {
@@ -53,7 +59,7 @@ export function GiftBuilderShell() {
   const [saving, setSaving] = useState(false);
   const [saveSuccessMsg, setSaveSuccessMsg] = useState<string | null>(null);
 
-  // 1. Recover cached state from localStorage on initial render
+  // 1. Recover state from localStorage on initial render
   useEffect(() => {
     try {
       const cached = localStorage.getItem(LOCAL_STORAGE_KEY);
@@ -63,13 +69,17 @@ export function GiftBuilderShell() {
           setState((prev) => ({
             ...prev,
             ...parsed.state,
-            // Retain photos array without non-serializable File handles
             photos: (parsed.state.photos || []).map((p: any) => ({
               id: p.id,
               previewUrl: p.previewUrl,
+              cloudinaryUrl: p.cloudinaryUrl,
               caption: p.caption || "",
               order: p.order || 0,
+              uploadStatus: p.cloudinaryUrl ? "uploaded" : "pending",
             })),
+            musicCloudinaryUrl: parsed.state.musicCloudinaryUrl || null,
+            musicName: parsed.state.musicName || null,
+            musicUploadStatus: parsed.state.musicCloudinaryUrl ? "uploaded" : "idle",
           }));
         }
         if (parsed.giftId) setGiftId(parsed.giftId);
@@ -80,7 +90,7 @@ export function GiftBuilderShell() {
     }
   }, []);
 
-  // 2. Backup state to localStorage (stripping non-serializable File objects)
+  // 2. Backup state to localStorage (stripping non-serializable File handles)
   useEffect(() => {
     try {
       const stateToCache = {
@@ -88,9 +98,13 @@ export function GiftBuilderShell() {
         photos: state.photos.map((p) => ({
           id: p.id,
           previewUrl: p.previewUrl,
+          cloudinaryUrl: p.cloudinaryUrl,
           caption: p.caption,
           order: p.order,
+          uploadStatus: p.uploadStatus,
         })),
+        musicFile: undefined,
+        musicPreviewUrl: undefined,
       };
       localStorage.setItem(
         LOCAL_STORAGE_KEY,
@@ -107,20 +121,20 @@ export function GiftBuilderShell() {
 
     if (stepNumber === 1) {
       if (!state.recipientName.trim()) {
-        newErrors.recipientName = "Recipient name is required";
+        newErrors.recipientName = "Please enter the recipient's name.";
       }
       if (!state.message.trim()) {
-        newErrors.message = "Main birthday message is required";
+        newErrors.message = "Please enter a birthday message.";
       }
     }
 
-    if (stepNumber === 3) {
+    if (stepNumber === 4) {
       if (state.letter && state.letter.length > 3000) {
         newErrors.letter = "Letter cannot exceed 3000 characters";
       }
     }
 
-    if (stepNumber === 6) {
+    if (stepNumber === 7) {
       if (state.pin && !/^\d{4}$/.test(state.pin)) {
         newErrors.pin = "PIN must be exactly 4 numeric digits (0-9)";
       }
@@ -130,21 +144,114 @@ export function GiftBuilderShell() {
     return Object.keys(newErrors).length === 0;
   };
 
+  // Upload pending photos to Cloudinary directly from the browser
+  const uploadPendingPhotos = async (targetId?: string): Promise<GiftPhotoDraft[]> => {
+    const updatedPhotos = [...state.photos];
+
+    for (let i = 0; i < updatedPhotos.length; i++) {
+      const photo = updatedPhotos[i];
+
+      if (photo.file && photo.uploadStatus !== "uploaded") {
+        updatedPhotos[i] = { ...photo, uploadStatus: "uploading", uploadError: undefined };
+        setState((prev) => ({ ...prev, photos: [...updatedPhotos] }));
+
+        try {
+          const secureUrl = await uploadFileToCloudinary(photo.file, targetId || giftId || "draft");
+          updatedPhotos[i] = {
+            ...photo,
+            cloudinaryUrl: secureUrl,
+            uploadStatus: "uploaded",
+          };
+          setState((prev) => ({ ...prev, photos: [...updatedPhotos] }));
+        } catch (err: any) {
+          console.warn(`Upload failed for photo ${photo.id}:`, err);
+          updatedPhotos[i] = {
+            ...photo,
+            uploadStatus: "error",
+            uploadError: err.message || "Cloudinary upload failed",
+          };
+          setState((prev) => ({ ...prev, photos: [...updatedPhotos] }));
+        }
+      }
+    }
+
+    return updatedPhotos;
+  };
+
+  // Upload pending music to Cloudinary
+  const uploadPendingMusic = async (targetId?: string): Promise<string | null> => {
+    if (state.musicFile && state.musicUploadStatus !== "uploaded") {
+      setState((prev) => ({ ...prev, musicUploadStatus: "uploading", musicUploadError: undefined }));
+
+      try {
+        const secureUrl = await uploadFileToCloudinary(
+          state.musicFile,
+          targetId || giftId || "draft",
+          { subfolder: "music", resourceType: "auto" }
+        );
+
+        setState((prev) => ({
+          ...prev,
+          musicCloudinaryUrl: secureUrl,
+          musicUploadStatus: "uploaded",
+        }));
+        return secureUrl;
+      } catch (err: any) {
+        console.warn("Music upload failed:", err);
+        setState((prev) => ({
+          ...prev,
+          musicUploadStatus: "error",
+          musicUploadError: err.message || "Failed to upload music to Cloudinary",
+        }));
+        return null;
+      }
+    }
+
+    return state.musicCloudinaryUrl || null;
+  };
+
+  const handleRetrySinglePhoto = async (photoId: string) => {
+    const index = state.photos.findIndex((p) => p.id === photoId);
+    if (index === -1) return;
+
+    const photo = state.photos[index];
+    if (!photo.file) return;
+
+    const updated = [...state.photos];
+    updated[index] = { ...photo, uploadStatus: "uploading", uploadError: undefined };
+    setState({ ...state, photos: updated });
+
+    try {
+      const secureUrl = await uploadFileToCloudinary(photo.file, giftId || "draft");
+      updated[index] = { ...photo, cloudinaryUrl: secureUrl, uploadStatus: "uploaded" };
+      setState({ ...state, photos: updated });
+    } catch (err: any) {
+      updated[index] = { ...photo, uploadStatus: "error", uploadError: err.message };
+      setState({ ...state, photos: updated });
+    }
+  };
+
   // Sync draft data to backend API
   const saveToBackend = async (): Promise<string | null> => {
     setSaving(true);
     setSaveSuccessMsg(null);
 
     try {
-      const validPhotos = state.photos
-        .filter((p) => p.previewUrl.trim().length > 0)
-        .map((p, idx) => ({
-          url: p.previewUrl.trim(),
-          caption: p.caption.trim(),
-          order: idx,
-        }));
+      const currentPhotos = await uploadPendingPhotos();
+      const musicCloudinaryUrl = await uploadPendingMusic();
 
-      const validWishes = state.wishes
+      const validPhotosPayload = currentPhotos
+        .map((p, idx) => {
+          const finalUrl = p.cloudinaryUrl || p.previewUrl;
+          return {
+            url: finalUrl.trim(),
+            caption: p.caption.trim(),
+            order: idx,
+          };
+        })
+        .filter((p) => p.url.length > 0);
+
+      const validWishesPayload = state.wishes
         .filter((w) => w.trim().length > 0)
         .map((w, idx) => ({ text: w.trim(), order: idx }));
 
@@ -155,31 +262,28 @@ export function GiftBuilderShell() {
         theme: state.theme,
         pin: state.pin.trim() || undefined,
         pinHint: state.pinHint.trim() || undefined,
-        photos: validPhotos,
-        wishes: validWishes,
+        musicUrl: musicCloudinaryUrl || null,
+        musicName: state.musicName || null,
+        photos: validPhotosPayload,
+        wishes: validWishesPayload,
       };
 
       if (giftId) {
-        const res = await fetch(`/api/gifts/${giftId}`, {
+        const data = await safeFetchJson(`/api/gifts/${giftId}`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload),
         });
 
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error || "Failed to update draft");
         setSaveSuccessMsg("Draft saved!");
         setTimeout(() => setSaveSuccessMsg(null), 3000);
         return giftId;
       } else {
-        const res = await fetch("/api/gifts", {
+        const data = await safeFetchJson("/api/gifts", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload),
         });
-
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error || "Failed to create draft");
 
         const newId = data.gift.id;
         setGiftId(newId);
@@ -199,7 +303,7 @@ export function GiftBuilderShell() {
   const handleNext = async () => {
     if (!validateStep(currentStep)) return;
 
-    if (currentStep === 1 || currentStep === 6) {
+    if (currentStep >= 1 && currentStep <= 7) {
       await saveToBackend();
     }
 
@@ -243,17 +347,24 @@ export function GiftBuilderShell() {
         onStepClick={handleStepClick}
       />
 
-      {/* Save Toast */}
+      {/* Save Toast Notification */}
       {saveSuccessMsg && (
-        <div className="p-3 rounded-xl bg-emerald-500/20 border border-emerald-500/30 text-xs font-semibold text-emerald-300 text-center animate-fade-in">
+        <div className="p-3.5 rounded-xl bg-[#E6F9F0] border border-[#A2E9C8] text-xs font-semibold text-[#0E7044] dark:bg-[#0F2D1F] dark:border-[#1E5C3F] dark:text-[#52D696] text-center shadow-sm opacity-100">
           {saveSuccessMsg}
         </div>
       )}
 
-      {/* Global Errors */}
+      {/* Global Error Banner */}
       {errors.global && (
-        <div className="p-4 rounded-xl bg-rose-500/20 border border-rose-500/30 text-xs text-rose-300">
-          {errors.global}
+        <div className="p-4 rounded-xl bg-[#FFF0F2] border border-[#F2A5B0] text-xs font-medium text-[#A83B4A] dark:bg-[#2A1720] dark:border-[#6B3542] dark:text-[#F0A7B2] shadow-sm opacity-100 flex items-center justify-between gap-3">
+          <span>{errors.global}</span>
+          <button
+            type="button"
+            onClick={() => setErrors({})}
+            className="text-xs font-bold underline shrink-0 hover:opacity-80"
+          >
+            Dismiss
+          </button>
         </div>
       )}
 
@@ -279,10 +390,23 @@ export function GiftBuilderShell() {
             <MemoriesStep
               photos={state.photos}
               onChange={(photos) => setState({ ...state, photos })}
+              onRetryUpload={handleRetrySinglePhoto}
             />
           )}
 
           {currentStep === 3 && (
+            <MusicStep
+              musicFile={state.musicFile}
+              musicPreviewUrl={state.musicPreviewUrl}
+              musicCloudinaryUrl={state.musicCloudinaryUrl}
+              musicName={state.musicName}
+              uploadStatus={state.musicUploadStatus}
+              uploadError={state.musicUploadError}
+              onChange={(musicData) => setState({ ...state, ...musicData })}
+            />
+          )}
+
+          {currentStep === 4 && (
             <LetterStep
               letter={state.letter}
               onChange={(letter) => setState({ ...state, letter })}
@@ -290,21 +414,21 @@ export function GiftBuilderShell() {
             />
           )}
 
-          {currentStep === 4 && (
+          {currentStep === 5 && (
             <WishesStep
               wishes={state.wishes}
               onChange={(wishes) => setState({ ...state, wishes })}
             />
           )}
 
-          {currentStep === 5 && (
+          {currentStep === 6 && (
             <ThemeStep
               theme={state.theme}
               onChange={(theme) => setState({ ...state, theme })}
             />
           )}
 
-          {currentStep === 6 && (
+          {currentStep === 7 && (
             <PinStep
               pin={state.pin}
               pinHint={state.pinHint}
@@ -313,7 +437,7 @@ export function GiftBuilderShell() {
             />
           )}
 
-          {currentStep === 7 && (
+          {currentStep === 8 && (
             <ReviewStep
               state={state}
               onEditStep={(stepNum) => setCurrentStep(stepNum)}
@@ -325,20 +449,20 @@ export function GiftBuilderShell() {
         </motion.div>
       </AnimatePresence>
 
-      {/* Bottom Step Navigation Footer (Steps 1 to 6) */}
-      {currentStep < 7 && (
-        <div className="flex items-center justify-between pt-4 border-t border-slate-800">
+      {/* Bottom Step Navigation Footer (Steps 1 to 7) */}
+      {currentStep < 8 && (
+        <div className="flex items-center justify-between pt-4 border-t border-[#D7E8F5] dark:border-[#29374A]">
           <Button
             type="button"
             variant="ghost"
             onClick={handlePrevious}
             disabled={currentStep === 1}
-            className="gap-2"
+            className={`gap-2 text-[#60758D] hover:text-[#26364A] dark:text-slate-300 dark:hover:text-white ${currentStep === 1 ? "invisible" : ""}`}
           >
             <ArrowLeft className="w-4 h-4" /> Previous
           </Button>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 w-full sm:w-auto justify-end">
             <Button
               type="button"
               variant="secondary"
@@ -354,9 +478,12 @@ export function GiftBuilderShell() {
               variant="primary"
               onClick={handleNext}
               disabled={saving}
-              className="gap-2 shadow-lg shadow-rose-500/25"
+              className={`gap-2 shadow-lg shadow-[#1688D4]/15 dark:shadow-[#A99AF4]/15 bg-[#1688D4] hover:bg-[#0284c7] text-white dark:bg-[#A99AF4] dark:hover:bg-[#b8abf6] dark:text-[#0B111D] font-bold ${
+                currentStep === 1 ? "w-full sm:w-auto text-base py-3 px-8" : ""
+              }`}
             >
-              Next Step <ArrowRight className="w-4 h-4" />
+              {saving ? "Uploading & Saving..." : currentStep === 1 ? "Continue →" : "Next Step"}{" "}
+              {currentStep > 1 && <ArrowRight className="w-4 h-4" />}
             </Button>
           </div>
         </div>

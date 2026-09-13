@@ -24,9 +24,10 @@ model Gift {
   recipientName String
   message       String
   letter        String?
-  theme         String   @default("sunset-glow")
+  theme         String   @default("dreamy") // dreamy, romantic, celebration
   pinHash       String?
-  status        String   @default("DRAFT") // Supported statuses: DRAFT, PUBLISHED
+  pinHint       String?
+  status        String   @default("DRAFT") // DRAFT, PUBLISHED
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 

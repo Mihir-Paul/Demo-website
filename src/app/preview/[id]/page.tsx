@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams } from "next/navigation";
 import Link from "next/link";
 import {
   Sparkles,
@@ -21,7 +21,6 @@ import { Card } from "@/components/ui/card";
 
 export default function PreviewSurprisePage() {
   const params = useParams();
-  const router = useRouter();
   const id = params?.id as string;
 
   const [gift, setGift] = useState<any>(null);
@@ -33,23 +32,30 @@ export default function PreviewSurprisePage() {
 
   useEffect(() => {
     if (!id) return;
+
     if (id === "test" || id === "demo") {
-      // Mock data for test preview
       setGift({
         id: "test-id",
         slug: "demo-sarah",
-        recipientName: "Sarah",
-        message: "Happy 25th Birthday! Wishing you a magic day! 🎉",
-        letter: "Dear Sarah, you make every day brighter. Thank you for being an amazing friend!",
-        theme: "sunset-glow",
+        recipientName: "Shalini",
+        message: "Happy Birthday! ❤️ Wishing you the happiest day ever!",
+        letter:
+          "Dear Shalini,\n\nI wanted to make something special for your birthday to remind you of how much you mean to everyone around you...",
+        theme: "dreamy",
         hasPin: true,
+        pinHint: "Something only we know",
         status: "DRAFT",
         photos: [
-          { id: "p1", url: "https://images.unsplash.com/photo-1513151233558-d860c5398176?q=80&w=800", caption: "Beach vacation memories!" },
+          {
+            id: "p1",
+            url: "https://images.unsplash.com/photo-1513151233558-d860c5398176?q=80&w=800",
+            caption: "Unforgettable memories together!",
+          },
         ],
         wishes: [
-          { id: "w1", text: "Wishing you infinite happiness and adventures!" },
-          { id: "w2", text: "May all your big dreams take flight this year!" },
+          { id: "w1", text: "More adventures together ✈️" },
+          { id: "w2", text: "Endless reasons to smile ❤️" },
+          { id: "w3", text: "Your best year yet ✨" },
         ],
       });
       setLoading(false);
@@ -113,6 +119,12 @@ export default function PreviewSurprisePage() {
     setTimeout(() => setCopied(false), 2500);
   };
 
+  const themeGradients: Record<string, string> = {
+    dreamy: "from-purple-600/30 to-pink-600/30 border-purple-500/30",
+    romantic: "from-rose-600/30 to-red-600/30 border-rose-500/30",
+    celebration: "from-amber-500/30 to-rose-500/30 border-amber-500/30",
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-midnight-950 flex items-center justify-center text-slate-400">
@@ -143,7 +155,7 @@ export default function PreviewSurprisePage() {
       <div className="ambient-glow-pink top-[10%] left-[20%] opacity-30" />
 
       <div className="relative z-10 mx-auto max-w-4xl space-y-8">
-        {/* Preview Top Banner */}
+        {/* Preview Top Header Bar */}
         <div className="glass-card p-6 rounded-2xl border-rose-500/30 flex flex-col md:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-3 text-left">
             <div className="w-10 h-10 rounded-xl bg-rose-500/20 border border-rose-500/30 flex items-center justify-center text-rose-400">
@@ -152,7 +164,7 @@ export default function PreviewSurprisePage() {
             <div>
               <div className="flex items-center gap-2">
                 <span className="font-serif font-bold text-lg text-white">
-                  Preview: Surprise for {gift.recipientName}
+                  Preview Mode: Surprise for {gift.recipientName}
                 </span>
                 <span
                   className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider ${
@@ -165,13 +177,13 @@ export default function PreviewSurprisePage() {
                 </span>
               </div>
               <p className="text-xs text-slate-400">
-                Review your digital story before sharing it with {gift.recipientName}.
+                This is how your surprise will feel to the recipient.
               </p>
             </div>
           </div>
 
           <div className="flex items-center gap-3 w-full md:w-auto justify-end">
-            <Link href="/create">
+            <Link href={`/create?draftId=${gift.id}`}>
               <Button variant="ghost" size="sm" className="gap-2">
                 <ArrowLeft className="w-4 h-4" /> Edit Details
               </Button>
@@ -191,21 +203,21 @@ export default function PreviewSurprisePage() {
             ) : (
               <Link href={`/g/${gift.slug}`}>
                 <Button variant="outline" size="sm" className="gap-2">
-                  <Share2 className="w-4 h-4" /> Open Recipient Page
+                  <Share2 className="w-4 h-4" /> Open Recipient Link
                 </Button>
               </Link>
             )}
           </div>
         </div>
 
-        {/* Shareable Link Alert (If Published) */}
+        {/* Shareable Link Banner (If Published) */}
         {shareUrl && (
           <div className="glass-card p-6 rounded-2xl border-emerald-500/40 bg-emerald-500/5 space-y-3">
             <div className="flex items-center gap-2 text-emerald-400 font-semibold text-sm">
               <CheckCircle2 className="w-5 h-5" /> Surprise Published & Ready to Share!
             </div>
             <p className="text-xs text-slate-300">
-              Send this private link to {gift.recipientName}:
+              Send this link to {gift.recipientName}:
             </p>
             <div className="flex items-center gap-2">
               <input
@@ -221,8 +233,13 @@ export default function PreviewSurprisePage() {
           </div>
         )}
 
-        {/* Live Story Preview Card Container */}
-        <div className="mx-auto max-w-md rounded-3xl border border-rose-500/30 bg-midnight-900 shadow-2xl overflow-hidden p-6 sm:p-8 space-y-6 relative">
+        {/* Live Recipient Card Container */}
+        <div
+          className={`mx-auto max-w-md rounded-3xl border bg-gradient-to-b ${
+            themeGradients[gift.theme] || themeGradients.dreamy
+          } bg-midnight-950 shadow-2xl overflow-hidden p-6 sm:p-8 space-y-6 relative`}
+        >
+          {/* Header */}
           <div className="text-center space-y-3">
             <div className="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-gradient-to-tr from-rose-500 to-pink-500 shadow-lg shadow-rose-500/40 text-white">
               <Gift className="w-6 h-6" />
@@ -230,24 +247,24 @@ export default function PreviewSurprisePage() {
             <h2 className="font-serif text-2xl font-bold text-white">
               Happy Birthday, {gift.recipientName}! 🎉
             </h2>
-            <p className="text-xs text-slate-300 leading-relaxed italic">
+            <p className="text-xs text-slate-200 leading-relaxed italic">
               "{gift.message}"
             </p>
           </div>
 
-          {/* Letter Section */}
+          {/* Letter */}
           {gift.letter && (
-            <Card className="p-4 rounded-xl bg-slate-900/80 border-slate-800">
+            <Card className="p-5 rounded-2xl bg-slate-900/80 border-slate-800">
               <div className="flex items-center gap-2 text-xs font-semibold text-rose-300 mb-2">
-                <Heart className="w-4 h-4 text-rose-400" /> A Personal Note
+                <Heart className="w-4 h-4 text-rose-400" /> Personal Note
               </div>
-              <p className="text-xs text-slate-300 leading-relaxed whitespace-pre-wrap">
+              <p className="text-xs text-slate-200 leading-relaxed whitespace-pre-wrap font-serif">
                 {gift.letter}
               </p>
             </Card>
           )}
 
-          {/* Photo Section */}
+          {/* Photo Gallery */}
           {gift.photos && gift.photos.length > 0 && (
             <div className="space-y-3">
               <div className="flex items-center gap-2 text-xs font-semibold text-amber-300">
@@ -258,13 +275,15 @@ export default function PreviewSurprisePage() {
                   key={photo.id || index}
                   className="rounded-2xl overflow-hidden border border-slate-800 bg-slate-950"
                 >
-                  <img
-                    src={photo.url}
-                    alt={photo.caption || "Memory"}
-                    className="w-full h-48 object-cover"
-                  />
+                  {photo.url ? (
+                    <img
+                      src={photo.url}
+                      alt={photo.caption || "Memory"}
+                      className="w-full h-48 object-cover"
+                    />
+                  ) : null}
                   {photo.caption && (
-                    <div className="p-3 text-xs text-slate-400 italic text-center">
+                    <div className="p-3 text-xs text-slate-300 italic text-center">
                       {photo.caption}
                     </div>
                   )}
@@ -273,11 +292,11 @@ export default function PreviewSurprisePage() {
             </div>
           )}
 
-          {/* Wishes Section */}
+          {/* Birthday Wishes */}
           {gift.wishes && gift.wishes.length > 0 && (
             <div className="space-y-2">
               <div className="flex items-center gap-2 text-xs font-semibold text-emerald-300 mb-1">
-                <Sparkles className="w-4 h-4 text-emerald-400" /> Birthday Wishes
+                <Sparkles className="w-4 h-4 text-emerald-400" /> Special Wishes
               </div>
               <ul className="space-y-2">
                 {gift.wishes.map((wish: any, index: number) => (
@@ -293,10 +312,15 @@ export default function PreviewSurprisePage() {
             </div>
           )}
 
-          {/* Security Badge */}
+          {/* Passcode Security */}
           {gift.hasPin && (
-            <div className="flex items-center justify-center gap-1.5 text-[11px] text-slate-500 pt-2 border-t border-slate-800">
-              <Lock className="w-3.5 h-3.5" /> PIN Code Protected Experience
+            <div className="flex flex-col items-center justify-center text-[11px] text-slate-400 pt-2 border-t border-slate-800/80 gap-1">
+              <div className="flex items-center gap-1.5 text-slate-300 font-semibold">
+                <Lock className="w-3.5 h-3.5 text-rose-400" /> Protected Experience
+              </div>
+              {gift.pinHint && (
+                <span className="italic">Hint: "{gift.pinHint}"</span>
+              )}
             </div>
           )}
         </div>

@@ -70,7 +70,7 @@ export async function POST(req: Request) {
       );
     }
 
-    const { recipientName, message, letter, theme, pin, photos, wishes } =
+    const { recipientName, message, letter, theme, pin, pinHint, photos, wishes } =
       validation.data;
 
     const slug = generateSlug(recipientName);
@@ -82,8 +82,9 @@ export async function POST(req: Request) {
         recipientName,
         message,
         letter: letter || null,
-        theme: theme || "sunset-glow",
+        theme: theme || "dreamy",
         pinHash,
+        pinHint: pinHint || null,
         status: "DRAFT",
         photos: photos?.length
           ? {
@@ -104,8 +105,8 @@ export async function POST(req: Request) {
           : undefined,
       },
       include: {
-        photos: true,
-        wishes: true,
+        photos: { orderBy: { order: "asc" } },
+        wishes: { orderBy: { order: "asc" } },
       },
     });
 
@@ -116,9 +117,14 @@ export async function POST(req: Request) {
           id: gift.id,
           slug: gift.slug,
           recipientName: gift.recipientName,
-          status: gift.status,
+          message: gift.message,
+          letter: gift.letter,
           theme: gift.theme,
+          status: gift.status,
           hasPin: Boolean(gift.pinHash),
+          pinHint: gift.pinHint,
+          photos: gift.photos,
+          wishes: gift.wishes,
           createdAt: gift.createdAt,
         },
       },

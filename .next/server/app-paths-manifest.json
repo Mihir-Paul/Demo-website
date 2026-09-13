@@ -1,8 +1,6 @@
 {
   "/page": "app/page.js",
-  "/preview/[id]/page": "app/preview/[id]/page.js",
-  "/api/gifts/route": "app/api/gifts/route.js",
   "/create/page": "app/create/page.js",
   "/api/gifts/[id]/route": "app/api/gifts/[id]/route.js",
-  "/api/gifts/[id]/publish/route": "app/api/gifts/[id]/publish/route.js"
+  "/preview/[id]/page": "app/preview/[id]/page.js"
 }

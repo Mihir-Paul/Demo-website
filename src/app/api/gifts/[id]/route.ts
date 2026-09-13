@@ -29,7 +29,6 @@ export async function GET(req: Request, { params }: RouteParams) {
       return NextResponse.json({ error: "Gift not found" }, { status: 404 });
     }
 
-    // Do not return actual pinHash to client
     const { pinHash, ...safeGift } = gift;
 
     return NextResponse.json({
@@ -38,10 +37,13 @@ export async function GET(req: Request, { params }: RouteParams) {
         hasPin: Boolean(pinHash),
       },
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error(`[GET /api/gifts/${params.id} Error]:`, error);
     return NextResponse.json(
-      { error: "Internal server error while fetching gift" },
+      {
+        error: "Internal server error while fetching gift",
+        details: process.env.NODE_ENV === "development" ? error.message : undefined,
+      },
       { status: 500 }
     );
   }
@@ -75,7 +77,7 @@ export async function PUT(req: Request, { params }: RouteParams) {
       );
     }
 
-    const { recipientName, message, letter, theme, pin, photos, wishes } =
+    const { recipientName, message, letter, theme, pin, pinHint, photos, wishes } =
       validation.data;
 
     let pinHash = existingGift.pinHash;
@@ -85,21 +87,22 @@ export async function PUT(req: Request, { params }: RouteParams) {
 
     // Transaction to update gift and replace photos/wishes if provided
     const updatedGift = await prisma.$transaction(async (tx) => {
-      if (photos) {
+      if (photos !== undefined) {
         await tx.photo.deleteMany({ where: { giftId: id } });
       }
-      if (wishes) {
+      if (wishes !== undefined) {
         await tx.wish.deleteMany({ where: { giftId: id } });
       }
 
       return tx.gift.update({
         where: { id },
         data: {
-          ...(recipientName && { recipientName }),
-          ...(message && { message }),
+          ...(recipientName !== undefined && { recipientName }),
+          ...(message !== undefined && { message }),
           ...(letter !== undefined && { letter }),
-          ...(theme && { theme }),
+          ...(theme !== undefined && { theme }),
           pinHash,
+          ...(pinHint !== undefined && { pinHint }),
           photos: photos?.length
             ? {
                 create: photos.map((p, idx) => ({
@@ -134,10 +137,13 @@ export async function PUT(req: Request, { params }: RouteParams) {
         hasPin: Boolean(updatedGift.pinHash),
       },
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error(`[PUT /api/gifts/${params.id} Error]:`, error);
     return NextResponse.json(
-      { error: "Internal server error while updating gift" },
+      {
+        error: "Internal server error while updating gift",
+        details: process.env.NODE_ENV === "development" ? error.message : undefined,
+      },
       { status: 500 }
     );
   }

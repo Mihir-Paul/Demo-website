@@ -1,16 +1,38 @@
 import { z } from "zod";
 
 export type GiftStatus = "DRAFT" | "PUBLISHED";
+export type GiftTheme = "dreamy" | "romantic" | "celebration";
 
 export interface PhotoInput {
+  id?: string;
   url: string;
   caption?: string;
   order?: number;
 }
 
 export interface WishInput {
+  id?: string;
   text: string;
   order?: number;
+}
+
+export interface GiftPhotoDraft {
+  id: string;
+  file?: File;
+  previewUrl: string;
+  caption: string;
+  order: number;
+}
+
+export interface GiftBuilderState {
+  recipientName: string;
+  message: string;
+  photos: GiftPhotoDraft[];
+  letter: string;
+  wishes: string[];
+  theme: GiftTheme;
+  pin: string;
+  pinHint: string;
 }
 
 export interface CreateGiftInput {
@@ -19,31 +41,24 @@ export interface CreateGiftInput {
   letter?: string;
   theme?: string;
   pin?: string;
-  photos?: PhotoInput[];
-  wishes?: WishInput[];
-}
-
-export interface UpdateGiftInput {
-  recipientName?: string;
-  message?: string;
-  letter?: string;
-  theme?: string;
-  pin?: string;
+  pinHint?: string;
   photos?: PhotoInput[];
   wishes?: WishInput[];
 }
 
 // Zod schemas for API payload validation
 export const CreateGiftSchema = z.object({
-  recipientName: z.string().min(1, "Recipient name is required").max(100),
-  message: z.string().min(1, "Message is required"),
-  letter: z.string().optional(),
-  theme: z.string().default("sunset-glow"),
-  pin: z.string().min(4).max(8).optional().or(z.literal("")),
+  recipientName: z.string().trim().min(1, "Recipient name is required").max(100),
+  message: z.string().trim().min(1, "Main message is required").max(300),
+  letter: z.string().max(3000, "Letter cannot exceed 3000 characters").optional(),
+  theme: z.enum(["dreamy", "romantic", "celebration"]).default("dreamy"),
+  pin: z.string().regex(/^\d{4}$/, "PIN must be exactly 4 numeric digits").optional().or(z.literal("")),
+  pinHint: z.string().max(100).optional(),
   photos: z
     .array(
       z.object({
-        url: z.string().url("Invalid image URL"),
+        id: z.string().optional(),
+        url: z.string().min(1, "Photo URL required"),
         caption: z.string().optional(),
         order: z.number().int().optional(),
       })
@@ -52,7 +67,8 @@ export const CreateGiftSchema = z.object({
   wishes: z
     .array(
       z.object({
-        text: z.string().min(1),
+        id: z.string().optional(),
+        text: z.string().trim().min(1, "Wish text cannot be empty"),
         order: z.number().int().optional(),
       })
     )

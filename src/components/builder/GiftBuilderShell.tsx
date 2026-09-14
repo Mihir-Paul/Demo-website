@@ -157,6 +157,8 @@ export function GiftBuilderShell() {
   // Upload pending photos to persistent cloud storage
   const uploadPendingPhotos = async (): Promise<GiftPhotoDraft[]> => {
     const updatedPhotos = [...state.photos];
+    let hasUploadFailure = false;
+    let firstError = "";
 
     for (let i = 0; i < updatedPhotos.length; i++) {
       const photo = updatedPhotos[i];
@@ -175,6 +177,8 @@ export function GiftBuilderShell() {
           setState((prev) => ({ ...prev, photos: [...updatedPhotos] }));
         } catch (err: any) {
           console.warn(`Upload failed for photo ${photo.id}:`, err);
+          hasUploadFailure = true;
+          firstError = firstError || err.message || "Photo upload failed";
           updatedPhotos[i] = {
             ...photo,
             uploadStatus: "error",
@@ -183,6 +187,10 @@ export function GiftBuilderShell() {
           setState((prev) => ({ ...prev, photos: [...updatedPhotos] }));
         }
       }
+    }
+
+    if (hasUploadFailure) {
+      throw new Error(`Photo upload failed: ${firstError}`);
     }
 
     return updatedPhotos;
@@ -209,7 +217,7 @@ export function GiftBuilderShell() {
           musicUploadStatus: "error",
           musicUploadError: err.message || "Music upload failed. Please try again.",
         }));
-        return null;
+        throw new Error(`Soundtrack upload failed: ${err.message || "Please try again."}`);
       }
     }
 

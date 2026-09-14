@@ -51,12 +51,17 @@ export async function POST(req: Request) {
       token.trim().length > 0 &&
       !token.includes("vercel_blob_rw_token_example");
 
+    const isVercelProduction = Boolean(
+      process.env.VERCEL || process.env.VERCEL_ENV || process.env.NODE_ENV === "production"
+    );
+
     if (isTokenConfigured) {
-      // Production path: Upload directly to Vercel Blob storage
+      // Persistent Vercel Blob Storage Path
       const sanitizedFilename = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
       const blob = await put(`surprises/${sanitizedFilename}`, file, {
         access: "public",
         addRandomSuffix: true,
+        token: token.trim(),
       });
 
       return NextResponse.json({
@@ -64,8 +69,18 @@ export async function POST(req: Request) {
         pathname: blob.pathname,
         contentType: blob.contentType,
       });
+    } else if (isVercelProduction) {
+      // In Vercel serverless production environment, return an explicit error
+      // instead of attempting to write to the read-only filesystem!
+      console.error("[POST /api/uploads Error]: BLOB_READ_WRITE_TOKEN environment variable is missing in Vercel project settings.");
+      return NextResponse.json(
+        {
+          error: "Vercel Blob Storage token (BLOB_READ_WRITE_TOKEN) is not configured in Vercel Environment Variables.",
+        },
+        { status: 500 }
+      );
     } else {
-      // Local dev fallback: Save file to public/uploads on disk to prevent bloated Data URLs
+      // Local development fallback: Save to public/uploads directory on local disk
       const arrayBuffer = await file.arrayBuffer();
       const buffer = Buffer.from(arrayBuffer);
       const uploadsDir = path.join(process.cwd(), "public", "uploads");

@@ -1,15 +1,63 @@
 import { NextResponse } from "next/server";
+import { handleUpload, type HandleUploadBody } from "@vercel/blob/client";
 import { put } from "@vercel/blob";
 import fs from "fs/promises";
 import path from "path";
 
 /**
  * POST /api/uploads
- * Uploads a file (photo or music) to Vercel Blob persistent storage.
- * Uses Vercel Blob OIDC / automatic environment authentication on Vercel.
- * Falls back to local disk storage in local dev if Vercel Blob is unconfigured/fails.
+ * Dual-mode endpoint for Vercel Blob persistent uploads:
+ * 1. JSON requests: Authorizes direct browser-to-Vercel-Blob client uploads via OIDC.
+ * 2. FormData requests: Handles server-side put() or local dev disk fallback.
  */
 export async function POST(req: Request) {
+  const contentType = req.headers.get("content-type") || "";
+
+  // Mode A: Vercel Blob Client Upload Authorization (application/json)
+  if (contentType.includes("application/json")) {
+    try {
+      const body = (await req.json()) as HandleUploadBody;
+      const jsonResponse = await handleUpload({
+        body,
+        request: req,
+        onBeforeGenerateToken: async (pathname, clientPayload) => {
+          return {
+            allowedContentTypes: [
+              "image/jpeg",
+              "image/jpg",
+              "image/png",
+              "image/webp",
+              "audio/mpeg",
+              "audio/mp3",
+              "audio/wav",
+              "audio/x-wav",
+              "audio/m4a",
+              "audio/x-m4a",
+              "audio/ogg",
+              "audio/aac",
+              "audio/flac",
+              "application/octet-stream",
+            ],
+            maximumSizeInBytes: 50 * 1024 * 1024, // 50MB max limit
+            tokenPayload: JSON.stringify({}),
+          };
+        },
+        onUploadCompleted: async ({ blob, tokenPayload }) => {
+          console.log("[POST /api/uploads Vercel Blob Client Upload Completed]:", blob.url);
+        },
+      });
+
+      return NextResponse.json(jsonResponse);
+    } catch (handleErr: any) {
+      console.error("[POST /api/uploads handleUpload Error]:", handleErr);
+      return NextResponse.json(
+        { error: handleErr?.message || "Failed to authorize client Blob upload." },
+        { status: 400 }
+      );
+    }
+  }
+
+  // Mode B: Multipart Form-Data Upload (FormData fallback)
   try {
     const formData = await req.formData();
     const file = formData.get("file") as File | null;
@@ -21,7 +69,6 @@ export async function POST(req: Request) {
       );
     }
 
-    // Validate type: images or audio
     const isImage = file.type.startsWith("image/");
     const isAudio =
       file.type.startsWith("audio/") ||
@@ -38,7 +85,6 @@ export async function POST(req: Request) {
       );
     }
 
-    // Size limit: 10MB for photos, 35MB for audio
     const maxSizeBytes = isAudio ? 35 * 1024 * 1024 : 10 * 1024 * 1024;
     if (file.size > maxSizeBytes) {
       const limitMb = isAudio ? 35 : 10;
@@ -50,14 +96,12 @@ export async function POST(req: Request) {
 
     const sanitizedFilename = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
 
-    // Try Vercel Blob put() directly (uses Vercel OIDC or BLOB_READ_WRITE_TOKEN natively)
     try {
       const options: { access: "public"; addRandomSuffix: boolean; token?: string } = {
         access: "public",
         addRandomSuffix: true,
       };
 
-      // Only supply token if explicitly configured in env (e.g. manual token override)
       if (
         process.env.BLOB_READ_WRITE_TOKEN &&
         process.env.BLOB_READ_WRITE_TOKEN.trim().length > 0 &&
@@ -78,7 +122,6 @@ export async function POST(req: Request) {
         process.env.VERCEL || process.env.VERCEL_ENV || process.env.NODE_ENV === "production"
       );
 
-      // On Vercel (production), fail immediately and return the exact Vercel Blob / OIDC error message
       if (isVercel) {
         console.error("[POST /api/uploads Vercel Blob Error]:", blobError);
         return NextResponse.json(
@@ -115,4 +158,3 @@ export async function POST(req: Request) {
     );
   }
 }
-

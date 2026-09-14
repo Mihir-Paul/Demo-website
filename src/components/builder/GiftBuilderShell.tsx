@@ -69,6 +69,11 @@ export function GiftBuilderShell() {
             typeof w === "string" ? w : (w?.text || "")
           );
 
+          const recoveredMusicUrl =
+            parsed.state.musicUrl && !parsed.state.musicUrl.startsWith("blob:")
+              ? parsed.state.musicUrl
+              : "";
+
           setState((prev) => ({
             ...prev,
             ...parsed.state,
@@ -77,16 +82,17 @@ export function GiftBuilderShell() {
               const url = p.storedUrl;
               return {
                 id: p.id,
-                previewUrl: p.previewUrl,
+                previewUrl: p.previewUrl && !p.previewUrl.startsWith("blob:") ? p.previewUrl : "",
                 storedUrl: url,
                 caption: p.caption || "",
                 order: p.order || 0,
                 uploadStatus: url ? "uploaded" : "pending",
               };
             }),
-            musicUrl: parsed.state.musicUrl || "",
+            musicUrl: recoveredMusicUrl,
+            musicPreviewUrl: undefined, // Never restore blob: URLs as previewUrl
             musicName: parsed.state.musicName || "",
-            musicUploadStatus: parsed.state.musicUrl ? "uploaded" : "pending",
+            musicUploadStatus: recoveredMusicUrl ? "uploaded" : "pending",
           }));
         }
         if (parsed.giftId) setGiftId(parsed.giftId);
@@ -97,19 +103,21 @@ export function GiftBuilderShell() {
     }
   }, []);
 
-  // 2. Backup state to localStorage (stripping non-serializable File handles)
+  // 2. Backup state to localStorage (stripping non-serializable File handles and blob: URLs)
   useEffect(() => {
     try {
       const stateToCache = {
         ...state,
         photos: state.photos.map((p) => ({
           id: p.id,
-          previewUrl: p.previewUrl,
+          previewUrl: p.previewUrl && !p.previewUrl.startsWith("blob:") ? p.previewUrl : "",
           storedUrl: p.storedUrl,
           caption: p.caption,
           order: p.order,
           uploadStatus: p.uploadStatus,
         })),
+        musicUrl: state.musicUrl && !state.musicUrl.startsWith("blob:") ? state.musicUrl : "",
+        musicPreviewUrl: undefined, // Never cache blob: object URLs
         musicFile: undefined,
       };
       localStorage.setItem(
@@ -152,27 +160,33 @@ export function GiftBuilderShell() {
 
   // Immediate Soundtrack Upload handler
   const handleSelectMusicFile = async (file: File) => {
-    const previewUrl = URL.createObjectURL(file);
+    const localPreviewUrl = URL.createObjectURL(file);
     setState((prev) => ({
       ...prev,
       musicFile: file,
-      musicPreviewUrl: previewUrl,
+      musicPreviewUrl: localPreviewUrl,
       musicName: file.name,
+      musicUrl: undefined, // Clear musicUrl until permanent upload finishes
       musicUploadStatus: "uploading",
       musicUploadError: undefined,
     }));
 
     try {
-      const url = await uploadFile(file);
+      const permanentUrl = await uploadFile(file);
+      if (!permanentUrl || permanentUrl.startsWith("blob:")) {
+        throw new Error("Vercel Blob storage returned an invalid or temporary blob URL.");
+      }
+
       setState((prev) => ({
         ...prev,
-        musicUrl: url,
+        musicUrl: permanentUrl,
         musicUploadStatus: "uploaded",
       }));
     } catch (err: any) {
       console.warn("Music upload failed:", err);
       setState((prev) => ({
         ...prev,
+        musicUrl: undefined,
         musicUploadStatus: "error",
         musicUploadError: err.message || "Audio upload failed. Please try again.",
       }));
@@ -204,6 +218,9 @@ export function GiftBuilderShell() {
       setState((prev) => ({ ...prev, musicUploadStatus: "uploading", musicUploadError: undefined }));
       try {
         const url = await uploadFile(state.musicFile);
+        if (!url || url.startsWith("blob:")) {
+          throw new Error("Storage returned an invalid or temporary URL.");
+        }
         setState((prev) => ({
           ...prev,
           musicUrl: url,
@@ -219,7 +236,7 @@ export function GiftBuilderShell() {
         throw new Error(`Music upload failed: ${err.message}`);
       }
     }
-    return state.musicUrl;
+    return state.musicUrl && !state.musicUrl.startsWith("blob:") ? state.musicUrl : undefined;
   };
 
   // Upload pending photos to persistent cloud storage
@@ -237,6 +254,9 @@ export function GiftBuilderShell() {
 
         try {
           const url = await uploadFile(photo.file);
+          if (!url || url.startsWith("blob:")) {
+            throw new Error("Photo upload returned a temporary blob URL.");
+          }
           updatedPhotos[i] = {
             ...photo,
             storedUrl: url,
@@ -277,6 +297,9 @@ export function GiftBuilderShell() {
 
     try {
       const url = await uploadFile(photo.file);
+      if (!url || url.startsWith("blob:")) {
+        throw new Error("Photo upload returned a temporary blob URL.");
+      }
       updated[index] = { ...photo, storedUrl: url, uploadStatus: "uploaded" };
       setState({ ...state, photos: updated });
     } catch (err: any) {
@@ -310,6 +333,11 @@ export function GiftBuilderShell() {
         .filter((w) => typeof w === "string" && w.trim().length > 0)
         .map((w, idx) => ({ text: w.trim(), order: idx }));
 
+      const sanitizedMusicUrl =
+        currentMusicUrl && !currentMusicUrl.startsWith("blob:")
+          ? currentMusicUrl.trim()
+          : undefined;
+
       const payload = {
         recipientName: state.recipientName.trim() || "Someone Special",
         message: state.message.trim() || "Happy Birthday!",
@@ -317,7 +345,7 @@ export function GiftBuilderShell() {
         theme: state.theme,
         pin: state.pin.trim() || undefined,
         pinHint: state.pinHint.trim() || undefined,
-        musicUrl: currentMusicUrl || undefined,
+        musicUrl: sanitizedMusicUrl,
         musicName: state.musicName || undefined,
         photos: validPhotosPayload,
         wishes: validWishesPayload,
@@ -335,7 +363,6 @@ export function GiftBuilderShell() {
           setTimeout(() => setSaveSuccessMsg(null), 3000);
           return giftId;
         } catch (err: any) {
-          // If draft record was deleted or not found on server, create a fresh draft
           if (err.message?.includes("not found") || err.message?.includes("404")) {
             console.warn("Stale giftId not found on server. Creating new draft record...");
             const data = await safeFetchJson("/api/gifts", {

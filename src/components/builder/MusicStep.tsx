@@ -87,7 +87,8 @@ export function MusicStep({
   };
 
   const activeAudioUrl = musicUrl || musicPreviewUrl;
-  const isUploaded = musicUploadStatus === "uploaded" || Boolean(musicUrl);
+  const isUploaded =
+    musicUploadStatus === "uploaded" && Boolean(musicUrl) && !musicUrl?.startsWith("blob:");
 
   return (
     <div className="space-y-6">

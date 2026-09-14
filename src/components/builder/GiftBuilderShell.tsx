@@ -142,6 +142,16 @@ export function GiftBuilderShell() {
       }
     }
 
+    if (stepNumber === 3) {
+      if (state.musicUploadStatus === "uploading") {
+        newErrors.music = "Soundtrack is currently uploading to cloud storage. Please wait for upload to complete.";
+      } else if (state.musicUploadStatus === "error") {
+        newErrors.music = "Soundtrack upload failed. Please retry the upload or remove the soundtrack before proceeding.";
+      } else if (state.musicFile && (!state.musicUrl || state.musicUrl.startsWith("blob:"))) {
+        newErrors.music = "Soundtrack file has not been successfully uploaded to Vercel Blob storage.";
+      }
+    }
+
     if (stepNumber === 4) {
       if (state.letter && state.letter.length > 3000) {
         newErrors.letter = "Letter cannot exceed 3000 characters";
@@ -170,6 +180,12 @@ export function GiftBuilderShell() {
       musicUploadStatus: "uploading",
       musicUploadError: undefined,
     }));
+    setErrors((prev) => {
+      const copy = { ...prev };
+      delete copy.music;
+      delete copy.global;
+      return copy;
+    });
 
     try {
       const permanentUrl = await uploadFile(file);
@@ -211,6 +227,11 @@ export function GiftBuilderShell() {
       musicUploadStatus: "pending",
       musicUploadError: undefined,
     }));
+    setErrors((prev) => {
+      const copy = { ...prev };
+      delete copy.music;
+      return copy;
+    });
   };
 
   const uploadPendingMusic = async (): Promise<string | undefined> => {
@@ -228,12 +249,13 @@ export function GiftBuilderShell() {
         }));
         return url;
       } catch (err: any) {
+        const errMsg = err.message || "Soundtrack upload failed";
         setState((prev) => ({
           ...prev,
           musicUploadStatus: "error",
-          musicUploadError: err.message || "Audio upload failed",
+          musicUploadError: errMsg,
         }));
-        throw new Error(`Music upload failed: ${err.message}`);
+        throw new Error(`Soundtrack upload failed: ${errMsg}`);
       }
     }
     return state.musicUrl && !state.musicUrl.startsWith("blob:") ? state.musicUrl : undefined;
@@ -405,7 +427,11 @@ export function GiftBuilderShell() {
     if (!validateStep(currentStep)) return;
 
     if (currentStep >= 1 && currentStep <= 7) {
-      await saveToBackend();
+      const savedId = await saveToBackend();
+      if (!savedId) {
+        // Save or media upload failed. Stop navigation immediately.
+        return;
+      }
     }
 
     if (currentStep < STEPS.length) {
@@ -419,9 +445,14 @@ export function GiftBuilderShell() {
     }
   };
 
-  const handleStepClick = (stepNumber: number) => {
-    if (stepNumber < currentStep || validateStep(currentStep)) {
+  const handleStepClick = async (stepNumber: number) => {
+    if (stepNumber < currentStep) {
       setCurrentStep(stepNumber);
+    } else if (validateStep(currentStep)) {
+      const savedId = await saveToBackend();
+      if (savedId) {
+        setCurrentStep(stepNumber);
+      }
     }
   };
 
@@ -501,7 +532,7 @@ export function GiftBuilderShell() {
               musicName={state.musicName}
               musicPreviewUrl={state.musicPreviewUrl}
               musicUploadStatus={state.musicUploadStatus}
-              musicUploadError={state.musicUploadError}
+              musicUploadError={state.musicUploadError || errors.music}
               onSelectFile={handleSelectMusicFile}
               onRemoveSong={handleRemoveSong}
               onRetryUpload={handleRetryMusicUpload}

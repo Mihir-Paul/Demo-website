@@ -1,4 +1,13 @@
 {
+  "/_not-found/page": "app/_not-found/page.js",
+  "/api/gifts/[id]/unlock/route": "app/api/gifts/[id]/unlock/route.js",
+  "/api/gifts/[id]/route": "app/api/gifts/[id]/route.js",
+  "/api/gifts/route": "app/api/gifts/route.js",
+  "/create/page": "app/create/page.js",
+  "/api/gifts/[id]/publish/route": "app/api/gifts/[id]/publish/route.js",
+  "/api/uploads/route": "app/api/uploads/route.js",
+  "/g/[slug]/page": "app/g/[slug]/page.js",
+  "/dashboard/page": "app/dashboard/page.js",
   "/preview/[id]/page": "app/preview/[id]/page.js",
-  "/create/page": "app/create/page.js"
+  "/page": "app/page.js"
 }

@@ -27,15 +27,19 @@ export function FinalRevealScene({
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
 
-  const audioSource = musicUrl || "/audio/birthday-music.mp3";
+  const hasValidMusic = Boolean(
+    musicUrl && typeof musicUrl === "string" && musicUrl.trim().length > 0 && !musicUrl.startsWith("blob:")
+  );
 
   // Trigger celebration confetti on mount
   useEffect(() => {
     fireCelebrationConfetti();
   }, []);
 
-  // Manage audio player exclusively for the Final Reveal Scene
+  // Manage audio player exclusively for the Final Reveal Scene IF a valid uploaded soundtrack exists
   useEffect(() => {
+    if (!hasValidMusic) return;
+
     const audio = audioRef.current;
     if (!audio) return;
 
@@ -64,9 +68,10 @@ export function FinalRevealScene({
       audio.pause();
       audio.currentTime = 0;
     };
-  }, [audioSource]);
+  }, [hasValidMusic, musicUrl]);
 
   const togglePlay = () => {
+    if (!hasValidMusic) return;
     const audio = audioRef.current;
     if (!audio) return;
 
@@ -82,7 +87,7 @@ export function FinalRevealScene({
   };
 
   const handleSceneClickInteraction = () => {
-    if (!isPlaying && audioRef.current) {
+    if (hasValidMusic && !isPlaying && audioRef.current) {
       audioRef.current
         .play()
         .then(() => setIsPlaying(true))
@@ -95,32 +100,34 @@ export function FinalRevealScene({
       onClick={handleSceneClickInteraction}
       className={`relative min-h-[100svh] w-full flex flex-col justify-between items-center py-8 px-4 sm:px-6 ${theme.bgGradient} ${theme.titleText} overflow-hidden`}
     >
-      {/* Audio Player initialized ONLY on the Final Surprise Page */}
-      <audio ref={audioRef} src={audioSource} preload="auto" loop />
-
-      {/* Floating Music Toggle Control Pill */}
-      <div className="fixed top-4 right-4 z-50">
-        <button
-          type="button"
-          onClick={(e) => {
-            e.stopPropagation();
-            togglePlay();
-          }}
-          className="flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/80 dark:bg-[#151F2E]/80 backdrop-blur border border-[#D7E8F5] dark:border-[#29374A] text-xs font-semibold shadow-lg hover:scale-105 transition-all text-[#26364A] dark:text-[#F5F7FA]"
-        >
-          {isPlaying ? (
-            <>
-              <Volume2 className="w-3.5 h-3.5 text-[#1688D4] dark:text-[#A99AF4] animate-pulse" />
-              <span>Music Playing 🎵</span>
-            </>
-          ) : (
-            <>
-              <VolumeX className="w-3.5 h-3.5 text-rose-500" />
-              <span>🎵 Tap to Play Music</span>
-            </>
-          )}
-        </button>
-      </div>
+      {/* Audio Player and Music Control Pill rendered ONLY if a persistent uploaded soundtrack exists */}
+      {hasValidMusic && (
+        <>
+          <audio ref={audioRef} src={musicUrl!} preload="auto" loop />
+          <div className="fixed top-4 right-4 z-50">
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                togglePlay();
+              }}
+              className="flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/80 dark:bg-[#151F2E]/80 backdrop-blur border border-[#D7E8F5] dark:border-[#29374A] text-xs font-semibold shadow-lg hover:scale-105 transition-all text-[#26364A] dark:text-[#F5F7FA]"
+            >
+              {isPlaying ? (
+                <>
+                  <Volume2 className="w-3.5 h-3.5 text-[#1688D4] dark:text-[#A99AF4] animate-pulse" />
+                  <span>Music Playing 🎵</span>
+                </>
+              ) : (
+                <>
+                  <VolumeX className="w-3.5 h-3.5 text-rose-500" />
+                  <span>🎵 Tap to Play Music</span>
+                </>
+              )}
+            </button>
+          </div>
+        </>
+      )}
 
       {/* Perimeter Floating Decorations */}
       <motion.div

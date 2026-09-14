@@ -8,12 +8,12 @@ import { Button } from "@/components/ui/button";
 import { BuilderProgress } from "./BuilderProgress";
 import { RecipientStep } from "./RecipientStep";
 import { MemoriesStep } from "./MemoriesStep";
+import { MusicStep } from "./MusicStep";
 import { LetterStep } from "./LetterStep";
 import { WishesStep } from "./WishesStep";
 import { ThemeStep } from "./ThemeStep";
 import { PinStep } from "./PinStep";
 import { ReviewStep } from "./ReviewStep";
-import { MusicStep } from "./MusicStep";
 import { GiftBuilderState, GiftPhotoDraft } from "@/types/gift";
 import { uploadFile } from "@/lib/upload";
 import { safeFetchJson } from "@/lib/utils";
@@ -40,11 +40,9 @@ const DEFAULT_STATE: GiftBuilderState = {
   theme: "sky-clouds",
   pin: "",
   pinHint: "",
-  musicFile: null,
-  musicPreviewUrl: null,
-  musicUrl: null,
-  musicName: null,
-  musicUploadStatus: "idle",
+  musicUrl: "",
+  musicName: "",
+  musicUploadStatus: "pending",
 };
 
 export function GiftBuilderShell() {
@@ -66,7 +64,6 @@ export function GiftBuilderShell() {
       if (cached) {
         const parsed = JSON.parse(cached);
         if (parsed.state) {
-          const loadedMusicUrl = parsed.state.musicUrl || null;
           const rawWishes = parsed.state.wishes || [];
           const normalizedWishes: string[] = rawWishes.map((w: any) =>
             typeof w === "string" ? w : (w?.text || "")
@@ -87,9 +84,9 @@ export function GiftBuilderShell() {
                 uploadStatus: url ? "uploaded" : "pending",
               };
             }),
-            musicUrl: loadedMusicUrl,
-            musicName: parsed.state.musicName || null,
-            musicUploadStatus: loadedMusicUrl ? "uploaded" : "idle",
+            musicUrl: parsed.state.musicUrl || "",
+            musicName: parsed.state.musicName || "",
+            musicUploadStatus: parsed.state.musicUrl ? "uploaded" : "pending",
           }));
         }
         if (parsed.giftId) setGiftId(parsed.giftId);
@@ -114,7 +111,6 @@ export function GiftBuilderShell() {
           uploadStatus: p.uploadStatus,
         })),
         musicFile: undefined,
-        musicPreviewUrl: undefined,
       };
       localStorage.setItem(
         LOCAL_STORAGE_KEY,
@@ -152,6 +148,78 @@ export function GiftBuilderShell() {
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
+  };
+
+  // Immediate Soundtrack Upload handler
+  const handleSelectMusicFile = async (file: File) => {
+    const previewUrl = URL.createObjectURL(file);
+    setState((prev) => ({
+      ...prev,
+      musicFile: file,
+      musicPreviewUrl: previewUrl,
+      musicName: file.name,
+      musicUploadStatus: "uploading",
+      musicUploadError: undefined,
+    }));
+
+    try {
+      const url = await uploadFile(file);
+      setState((prev) => ({
+        ...prev,
+        musicUrl: url,
+        musicUploadStatus: "uploaded",
+      }));
+    } catch (err: any) {
+      console.warn("Music upload failed:", err);
+      setState((prev) => ({
+        ...prev,
+        musicUploadStatus: "error",
+        musicUploadError: err.message || "Audio upload failed. Please try again.",
+      }));
+    }
+  };
+
+  const handleRetryMusicUpload = async () => {
+    if (!state.musicFile) return;
+    await handleSelectMusicFile(state.musicFile);
+  };
+
+  const handleRemoveSong = () => {
+    if (state.musicPreviewUrl && state.musicPreviewUrl.startsWith("blob:")) {
+      URL.revokeObjectURL(state.musicPreviewUrl);
+    }
+    setState((prev) => ({
+      ...prev,
+      musicFile: undefined,
+      musicPreviewUrl: undefined,
+      musicUrl: undefined,
+      musicName: undefined,
+      musicUploadStatus: "pending",
+      musicUploadError: undefined,
+    }));
+  };
+
+  const uploadPendingMusic = async (): Promise<string | undefined> => {
+    if (state.musicFile && state.musicUploadStatus !== "uploaded") {
+      setState((prev) => ({ ...prev, musicUploadStatus: "uploading", musicUploadError: undefined }));
+      try {
+        const url = await uploadFile(state.musicFile);
+        setState((prev) => ({
+          ...prev,
+          musicUrl: url,
+          musicUploadStatus: "uploaded",
+        }));
+        return url;
+      } catch (err: any) {
+        setState((prev) => ({
+          ...prev,
+          musicUploadStatus: "error",
+          musicUploadError: err.message || "Audio upload failed",
+        }));
+        throw new Error(`Music upload failed: ${err.message}`);
+      }
+    }
+    return state.musicUrl;
   };
 
   // Upload pending photos to persistent cloud storage
@@ -196,38 +264,6 @@ export function GiftBuilderShell() {
     return updatedPhotos;
   };
 
-  // Upload pending music to persistent cloud storage
-  const uploadPendingMusic = async (): Promise<string | null> => {
-    if (state.musicUrl) {
-      return state.musicUrl;
-    }
-
-    if (state.musicFile && state.musicUploadStatus !== "uploaded") {
-      setState((prev) => ({ ...prev, musicUploadStatus: "uploading", musicUploadError: undefined }));
-
-      try {
-        const url = await uploadFile(state.musicFile);
-
-        setState((prev) => ({
-          ...prev,
-          musicUrl: url,
-          musicUploadStatus: "uploaded",
-        }));
-        return url;
-      } catch (err: any) {
-        console.warn("Music upload failed:", err);
-        setState((prev) => ({
-          ...prev,
-          musicUploadStatus: "error",
-          musicUploadError: err.message || "Music upload failed. Please try again.",
-        }));
-        throw new Error(`Soundtrack upload failed: ${err.message || "Please try again."}`);
-      }
-    }
-
-    return state.musicUrl || null;
-  };
-
   const handleRetrySinglePhoto = async (photoId: string) => {
     const index = state.photos.findIndex((p) => p.id === photoId);
     if (index === -1) return;
@@ -256,7 +292,7 @@ export function GiftBuilderShell() {
 
     try {
       const currentPhotos = await uploadPendingPhotos();
-      const storedMusicUrl = await uploadPendingMusic();
+      const currentMusicUrl = await uploadPendingMusic();
 
       const validPhotosPayload = currentPhotos
         .map((p, idx) => {
@@ -281,8 +317,8 @@ export function GiftBuilderShell() {
         theme: state.theme,
         pin: state.pin.trim() || undefined,
         pinHint: state.pinHint.trim() || undefined,
-        musicUrl: storedMusicUrl || null,
-        musicName: state.musicName || null,
+        musicUrl: currentMusicUrl || undefined,
+        musicName: state.musicName || undefined,
         photos: validPhotosPayload,
         wishes: validWishesPayload,
       };
@@ -434,13 +470,14 @@ export function GiftBuilderShell() {
 
           {currentStep === 3 && (
             <MusicStep
-              musicFile={state.musicFile}
-              musicPreviewUrl={state.musicPreviewUrl}
               musicUrl={state.musicUrl}
               musicName={state.musicName}
-              uploadStatus={state.musicUploadStatus}
-              uploadError={state.musicUploadError}
-              onChange={(musicData) => setState({ ...state, ...musicData })}
+              musicPreviewUrl={state.musicPreviewUrl}
+              musicUploadStatus={state.musicUploadStatus}
+              musicUploadError={state.musicUploadError}
+              onSelectFile={handleSelectMusicFile}
+              onRemoveSong={handleRemoveSong}
+              onRetryUpload={handleRetryMusicUpload}
             />
           )}
 

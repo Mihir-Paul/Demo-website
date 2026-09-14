@@ -1,6 +1,6 @@
-import React, { useEffect, useState, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
-import { PartyPopper, RotateCcw, PlusCircle, Play, Pause, Disc, Music } from "lucide-react";
+import { PartyPopper, RotateCcw, PlusCircle, Volume2, VolumeX } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { fireCelebrationConfetti } from "@/lib/confetti";
@@ -10,7 +10,6 @@ interface FinalRevealSceneProps {
   recipientName: string;
   message: string;
   musicUrl?: string | null;
-  musicName?: string | null;
   onReplay: () => void;
   themeConfig?: ThemeConfig;
 }
@@ -19,50 +18,53 @@ export function FinalRevealScene({
   recipientName,
   message,
   musicUrl,
-  musicName,
   onReplay,
   themeConfig,
 }: FinalRevealSceneProps) {
-  const audioRef = useRef<HTMLAudioElement | null>(null);
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [currentTime, setCurrentTime] = useState(0);
-  const [duration, setDuration] = useState(0);
-
   const theme = themeConfig || getThemeConfig("sky-clouds");
   const emojis = theme.floatingEmojis;
 
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const [isPlaying, setIsPlaying] = useState(false);
+
+  const audioSource = musicUrl || "/audio/birthday-music.mp3";
+
+  // Trigger celebration confetti on mount
   useEffect(() => {
     fireCelebrationConfetti();
   }, []);
 
-  // Handle Audio events & initial autoplay attempt on final reveal mount
+  // Manage audio player exclusively for the Final Reveal Scene
   useEffect(() => {
     const audio = audioRef.current;
-    if (!audio || !musicUrl) return;
+    if (!audio) return;
 
-    const handleTimeUpdate = () => setCurrentTime(audio.currentTime);
-    const handleLoadedMetadata = () => setDuration(audio.duration || 0);
-    const handleEnded = () => setIsPlaying(false);
+    audio.volume = 0.5;
+    audio.loop = true;
 
-    audio.addEventListener("timeupdate", handleTimeUpdate);
-    audio.addEventListener("loadedmetadata", handleLoadedMetadata);
-    audio.addEventListener("ended", handleEnded);
+    let isSubscribed = true;
 
-    // Attempt autoplay if permitted by browser policy
-    audio
-      .play()
-      .then(() => setIsPlaying(true))
-      .catch((err) => {
-        // Autoplay restricted by browser — recipient can press Play button
-        setIsPlaying(false);
-      });
-
-    return () => {
-      audio.removeEventListener("timeupdate", handleTimeUpdate);
-      audio.removeEventListener("loadedmetadata", handleLoadedMetadata);
-      audio.removeEventListener("ended", handleEnded);
+    const attemptPlay = () => {
+      audio
+        .play()
+        .then(() => {
+          if (isSubscribed) setIsPlaying(true);
+        })
+        .catch(() => {
+          // Autoplay blocked by browser policy until user gesture
+          if (isSubscribed) setIsPlaying(false);
+        });
     };
-  }, [musicUrl]);
+
+    attemptPlay();
+
+    // Clean up audio completely when leaving the final scene
+    return () => {
+      isSubscribed = false;
+      audio.pause();
+      audio.currentTime = 0;
+    };
+  }, [audioSource]);
 
   const togglePlay = () => {
     const audio = audioRef.current;
@@ -79,15 +81,47 @@ export function FinalRevealScene({
     }
   };
 
-  const formatTime = (secs: number) => {
-    if (isNaN(secs) || secs < 0) return "0:00";
-    const m = Math.floor(secs / 60);
-    const s = Math.floor(secs % 60);
-    return `${m}:${s < 10 ? "0" : ""}${s}`;
+  const handleSceneClickInteraction = () => {
+    if (!isPlaying && audioRef.current) {
+      audioRef.current
+        .play()
+        .then(() => setIsPlaying(true))
+        .catch(() => {});
+    }
   };
 
   return (
-    <div className={`relative min-h-[100svh] w-full flex flex-col justify-between items-center py-8 px-4 sm:px-6 ${theme.bgGradient} ${theme.titleText} overflow-hidden`}>
+    <div
+      onClick={handleSceneClickInteraction}
+      className={`relative min-h-[100svh] w-full flex flex-col justify-between items-center py-8 px-4 sm:px-6 ${theme.bgGradient} ${theme.titleText} overflow-hidden`}
+    >
+      {/* Audio Player initialized ONLY on the Final Surprise Page */}
+      <audio ref={audioRef} src={audioSource} preload="auto" loop />
+
+      {/* Floating Music Toggle Control Pill */}
+      <div className="fixed top-4 right-4 z-50">
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            togglePlay();
+          }}
+          className="flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/80 dark:bg-[#151F2E]/80 backdrop-blur border border-[#D7E8F5] dark:border-[#29374A] text-xs font-semibold shadow-lg hover:scale-105 transition-all text-[#26364A] dark:text-[#F5F7FA]"
+        >
+          {isPlaying ? (
+            <>
+              <Volume2 className="w-3.5 h-3.5 text-[#1688D4] dark:text-[#A99AF4] animate-pulse" />
+              <span>Music Playing 🎵</span>
+            </>
+          ) : (
+            <>
+              <VolumeX className="w-3.5 h-3.5 text-rose-500" />
+              <span>🎵 Tap to Play Music</span>
+            </>
+          )}
+        </button>
+      </div>
+
       {/* Perimeter Floating Decorations */}
       <motion.div
         animate={{ y: [0, -20, 0] }}
@@ -155,67 +189,6 @@ export function FinalRevealScene({
             </p>
           )}
         </div>
-
-        {/* Uploaded Birthday Soundtrack Player (If music exists) */}
-        {musicUrl && (
-          <div className={`${theme.cardBg} backdrop-blur-md p-5 sm:p-6 rounded-3xl border ${theme.cardBorder} ${theme.cardShadow} max-w-md w-full mb-6 text-center space-y-4 opacity-100`}>
-            <audio ref={audioRef} src={musicUrl} preload="auto" />
-
-            <div className="flex items-center justify-center gap-3">
-              <motion.div
-                animate={{ rotate: isPlaying ? 360 : 0 }}
-                transition={{ duration: 4, repeat: isPlaying ? Infinity : 0, ease: "linear" }}
-                className={`w-12 h-12 rounded-full ${theme.iconBg} ${theme.iconColor} flex items-center justify-center shadow-md shrink-0`}
-              >
-                <Disc className="w-6 h-6" />
-              </motion.div>
-              <div className="text-left truncate flex-1">
-                <div className={`text-xs font-bold ${theme.titleText} truncate flex items-center gap-1.5`}>
-                  <Music className={`w-3.5 h-3.5 ${theme.accentText} shrink-0`} />
-                  <span className="truncate">{musicName || "Birthday Soundtrack"}</span>
-                </div>
-                <div className={`text-[11px] ${theme.mutedText} font-mono mt-0.5`}>
-                  {formatTime(currentTime)} / {formatTime(duration)}
-                </div>
-              </div>
-            </div>
-
-            {/* Equalizer Spectrum Bars */}
-            <div className="flex items-center justify-center gap-1.5 h-5">
-              {[0.4, 0.9, 0.6, 1.0, 0.5, 0.8, 0.3].map((val, idx) => (
-                <motion.div
-                  key={idx}
-                  animate={{
-                    height: isPlaying ? [4, 20, 8, 22, 4] : 4,
-                  }}
-                  transition={{
-                    duration: 0.8,
-                    repeat: isPlaying ? Infinity : 0,
-                    delay: idx * 0.1,
-                  }}
-                  className={`w-1 rounded-full ${theme.iconBg}`}
-                />
-              ))}
-            </div>
-
-            {/* Play/Pause Button */}
-            <Button
-              size="lg"
-              onClick={togglePlay}
-              className={`w-full gap-2 text-sm py-4 ${theme.primaryBtnBg} ${theme.primaryBtnText} ${theme.primaryBtnShadow} font-semibold rounded-xl`}
-            >
-              {isPlaying ? (
-                <>
-                  <Pause className="w-4 h-4" /> Pause Song
-                </>
-              ) : (
-                <>
-                  <Play className="w-4 h-4" /> Play Song 🎵
-                </>
-              )}
-            </Button>
-          </div>
-        )}
 
         {/* Wish Banner */}
         <div className={`p-4 rounded-2xl ${theme.innerCardBg} border ${theme.innerCardBorder} text-xs sm:text-sm ${theme.accentText} font-semibold shadow-md max-w-md w-full mb-6 sm:mb-8`}>

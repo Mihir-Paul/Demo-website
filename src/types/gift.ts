@@ -36,13 +36,11 @@ export interface GiftBuilderState {
   theme: GiftTheme;
   pin: string;
   pinHint: string;
-
-  // Local music state
-  musicFile?: File | null;
-  musicPreviewUrl?: string | null;
-  musicUrl?: string | null;
-  musicName?: string | null;
-  musicUploadStatus?: "idle" | "uploading" | "uploaded" | "error";
+  musicFile?: File;
+  musicPreviewUrl?: string;
+  musicUrl?: string;
+  musicName?: string;
+  musicUploadStatus?: "pending" | "uploading" | "uploaded" | "error";
   musicUploadError?: string;
 }
 
@@ -53,8 +51,8 @@ export interface CreateGiftInput {
   theme?: string;
   pin?: string;
   pinHint?: string;
-  musicUrl?: string | null;
-  musicName?: string | null;
+  musicUrl?: string;
+  musicName?: string;
   photos?: PhotoInput[];
   wishes?: WishInput[];
 }
@@ -67,8 +65,8 @@ export const CreateGiftSchema = z.object({
   theme: z.enum(["sky-clouds", "festive-party", "midnight-celebration"]).default("sky-clouds"),
   pin: z.string().regex(/^\d{4}$/, "PIN must be exactly 4 numeric digits").optional().or(z.literal("")),
   pinHint: z.string().max(100).optional(),
-  musicUrl: z.string().nullable().optional(),
-  musicName: z.string().nullable().optional(),
+  musicUrl: z.string().optional().nullable(),
+  musicName: z.string().optional().nullable(),
   photos: z
     .array(
       z.object({
@@ -97,8 +95,8 @@ export const UpdateGiftSchema = z.object({
   theme: z.enum(["sky-clouds", "festive-party", "midnight-celebration"]).optional(),
   pin: z.string().regex(/^\d{4}$/, "PIN must be exactly 4 numeric digits").optional().nullable().or(z.literal("")),
   pinHint: z.string().max(100).optional().nullable(),
-  musicUrl: z.string().nullable().optional(),
-  musicName: z.string().nullable().optional(),
+  musicUrl: z.string().optional().nullable(),
+  musicName: z.string().optional().nullable(),
   photos: z
     .array(
       z.object({

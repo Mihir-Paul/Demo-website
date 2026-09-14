@@ -1,5 +1,5 @@
 import React from "react";
-import { Gift, Camera, MessageSquare, Sparkles, Palette, Lock, ArrowLeft, Eye, Save } from "lucide-react";
+import { Gift, Camera, Music, MessageSquare, Sparkles, Palette, Lock, ArrowLeft, Eye, Save } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { GiftBuilderState } from "@/types/gift";
 
@@ -24,14 +24,8 @@ export function ReviewStep({
     "midnight-celebration": "Midnight Celebration ✨",
   };
 
-  const hasMusic = Boolean(
-    state.musicName ||
-      state.musicUrl ||
-      state.musicFile ||
-      state.musicPreviewUrl
-  );
-
   const hasPhotos = state.photos.length > 0;
+  const activeMusicUrl = state.musicUrl || state.musicPreviewUrl;
 
   return (
     <div className="space-y-6 opacity-100">
@@ -43,13 +37,13 @@ export function ReviewStep({
           Your surprise is ready!
         </h2>
         <p className="text-xs sm:text-sm text-[#60758D] dark:text-[#A8B6C8] mt-1.5 leading-relaxed font-normal">
-          Review your birthday gift details below before previewing or saving your draft.
+          Review your birthday gift details below before previewing or publishing.
         </p>
       </div>
 
-      {/* Summary Grid with Solid Cards */}
+      {/* Summary Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        {/* Recipient */}
+        {/* Step 1: Recipient */}
         <div className="p-4 rounded-2xl bg-[#F7FBFF] border border-[#D7E8F5] dark:bg-[#172235] dark:border-[#29374A] space-y-1.5 opacity-100 shadow-sm">
           <div className="flex items-center justify-between">
             <span className="text-[10px] uppercase font-bold tracking-wider text-[#1688D4] dark:text-[#8FAED8] flex items-center gap-1.5">
@@ -71,7 +65,7 @@ export function ReviewStep({
           </p>
         </div>
 
-        {/* Memories */}
+        {/* Step 2: Memories */}
         <div className="p-4 rounded-2xl bg-[#F7FBFF] border border-[#D7E8F5] dark:bg-[#172235] dark:border-[#29374A] space-y-1.5 opacity-100 shadow-sm">
           <div className="flex items-center justify-between">
             <span className="text-[10px] uppercase font-bold tracking-wider text-[#8E7CC3] dark:text-[#F1D9A6] flex items-center gap-1.5">
@@ -93,11 +87,11 @@ export function ReviewStep({
           </p>
         </div>
 
-        {/* Soundtrack */}
+        {/* Step 3: Soundtrack */}
         <div className="p-4 rounded-2xl bg-[#F7FBFF] border border-[#D7E8F5] dark:bg-[#172235] dark:border-[#29374A] space-y-1.5 opacity-100 shadow-sm">
           <div className="flex items-center justify-between">
-            <span className="text-[10px] uppercase font-bold tracking-wider text-[#1688D4] dark:text-[#8FAED8] flex items-center gap-1.5">
-              <Sparkles className="w-3.5 h-3.5 text-[#1688D4] dark:text-[#8FAED8]" /> Soundtrack
+            <span className="text-[10px] uppercase font-bold tracking-wider text-[#1688D4] dark:text-[#A99AF4] flex items-center gap-1.5">
+              <Music className="w-3.5 h-3.5 text-[#1688D4] dark:text-[#A99AF4]" /> Soundtrack
             </span>
             <button
               type="button"
@@ -108,14 +102,16 @@ export function ReviewStep({
             </button>
           </div>
           <p className="font-serif font-bold text-base text-[#26364A] dark:text-[#F5F7FA] truncate">
-            {hasMusic ? (state.musicName || "Custom song attached") : "No soundtrack selected"}
+            {state.musicName || (activeMusicUrl ? "Custom Song Uploaded 🎵" : "Default Birthday Track 🎵")}
           </p>
-          <p className="text-xs text-[#60758D] dark:text-[#A8B6C8]">
-            {hasMusic ? "Music uploaded successfully" : "No music uploaded"}
-          </p>
+          {activeMusicUrl && (
+            <div className="pt-1">
+              <audio controls src={activeMusicUrl} className="w-full h-8" />
+            </div>
+          )}
         </div>
 
-        {/* Letter */}
+        {/* Step 4: Birthday Note / Letter */}
         <div className="p-4 rounded-2xl bg-[#F7FBFF] border border-[#D7E8F5] dark:bg-[#172235] dark:border-[#29374A] space-y-1.5 opacity-100 shadow-sm">
           <div className="flex items-center justify-between">
             <span className="text-[10px] uppercase font-bold tracking-wider text-[#E85D83] dark:text-[#E7A6B7] flex items-center gap-1.5">
@@ -137,7 +133,7 @@ export function ReviewStep({
           </p>
         </div>
 
-        {/* Wishes */}
+        {/* Step 5: Wishes */}
         <div className="p-4 rounded-2xl bg-[#F7FBFF] border border-[#D7E8F5] dark:bg-[#172235] dark:border-[#29374A] space-y-1.5 opacity-100 shadow-sm">
           <div className="flex items-center justify-between">
             <span className="text-[10px] uppercase font-bold tracking-wider text-[#8E7CC3] dark:text-[#F1D9A6] flex items-center gap-1.5">
@@ -159,7 +155,7 @@ export function ReviewStep({
           </p>
         </div>
 
-        {/* Theme */}
+        {/* Step 6: Theme */}
         <div className="p-4 rounded-2xl bg-[#F7FBFF] border border-[#D7E8F5] dark:bg-[#172235] dark:border-[#29374A] space-y-1.5 opacity-100 shadow-sm">
           <div className="flex items-center justify-between">
             <span className="text-[10px] uppercase font-bold tracking-wider text-[#1688D4] dark:text-[#A99AF4] flex items-center gap-1.5">
@@ -178,7 +174,7 @@ export function ReviewStep({
           </p>
         </div>
 
-        {/* PIN */}
+        {/* Step 7: PIN */}
         <div className="p-4 rounded-2xl bg-[#F7FBFF] border border-[#D7E8F5] dark:bg-[#172235] dark:border-[#29374A] space-y-1.5 sm:col-span-2 opacity-100 shadow-sm">
           <div className="flex items-center justify-between">
             <span className="text-[10px] uppercase font-bold tracking-wider text-[#1688D4] dark:text-[#8FAED8] flex items-center gap-1.5">

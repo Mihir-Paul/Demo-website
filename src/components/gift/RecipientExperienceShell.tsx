@@ -6,7 +6,6 @@ import { WelcomeScene } from "./WelcomeScene";
 import { CapturedMemoryScene } from "./CapturedMemoryScene";
 import { MemoryGalleryScene } from "./MemoryGalleryScene";
 import { BirthdayCakeScene } from "./BirthdayCakeScene";
-import { MusicScene } from "./MusicScene";
 import { LetterScene } from "./LetterScene";
 import { WishesScene } from "./WishesScene";
 import { FinalRevealScene } from "./FinalRevealScene";
@@ -34,7 +33,6 @@ type SceneKey =
   | "captured_memory"
   | "gallery"
   | "cake"
-  | "music"
   | "letter"
   | "wishes"
   | "final";
@@ -68,9 +66,6 @@ export function RecipientExperienceShell({
   }
   if (gift.wishes && gift.wishes.length > 0) {
     validScenes.push("wishes");
-  }
-  if (gift.musicUrl && gift.musicUrl.trim().length > 0) {
-    validScenes.push("music");
   }
   validScenes.push("final");
 
@@ -260,24 +255,6 @@ export function RecipientExperienceShell({
             </motion.div>
           )}
 
-          {currentScene === "music" && (
-            <motion.div
-              key="music"
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              transition={{ duration: 0.3 }}
-            >
-              <MusicScene
-                musicUrl={gift.musicUrl}
-                musicName={gift.musicName}
-                recipientName={gift.recipientName}
-                onNext={advanceScene}
-                themeConfig={themeConfig}
-              />
-            </motion.div>
-          )}
-
           {currentScene === "final" && (
             <motion.div
               key="final"
@@ -290,7 +267,6 @@ export function RecipientExperienceShell({
                 recipientName={gift.recipientName}
                 message={gift.message}
                 musicUrl={gift.musicUrl}
-                musicName={gift.musicName}
                 onReplay={handleReplay}
                 themeConfig={themeConfig}
               />

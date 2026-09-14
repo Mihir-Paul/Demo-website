@@ -67,9 +67,15 @@ export function GiftBuilderShell() {
         const parsed = JSON.parse(cached);
         if (parsed.state) {
           const loadedMusicUrl = parsed.state.musicUrl || null;
+          const rawWishes = parsed.state.wishes || [];
+          const normalizedWishes: string[] = rawWishes.map((w: any) =>
+            typeof w === "string" ? w : (w?.text || "")
+          );
+
           setState((prev) => ({
             ...prev,
             ...parsed.state,
+            wishes: normalizedWishes,
             photos: (parsed.state.photos || []).map((p: any) => {
               const url = p.storedUrl;
               return {
@@ -244,20 +250,21 @@ export function GiftBuilderShell() {
         .map((p, idx) => {
           const finalUrl = p.storedUrl || p.previewUrl;
           return {
-            url: finalUrl.trim(),
-            caption: p.caption.trim(),
+            url: finalUrl ? finalUrl.trim() : "",
+            caption: p.caption ? p.caption.trim() : "",
             order: idx,
           };
         })
-        .filter((p) => p.url.length > 0);
+        .filter((p) => p.url.length > 0 && !p.url.startsWith("blob:"));
 
-      const validWishesPayload = state.wishes
-        .filter((w) => w.trim().length > 0)
+      const validWishesPayload = (state.wishes || [])
+        .map((w: any) => (typeof w === "string" ? w : w?.text || ""))
+        .filter((w) => typeof w === "string" && w.trim().length > 0)
         .map((w, idx) => ({ text: w.trim(), order: idx }));
 
       const payload = {
-        recipientName: state.recipientName.trim(),
-        message: state.message.trim(),
+        recipientName: state.recipientName.trim() || "Someone Special",
+        message: state.message.trim() || "Happy Birthday!",
         letter: state.letter.trim() || undefined,
         theme: state.theme,
         pin: state.pin.trim() || undefined,
@@ -269,15 +276,34 @@ export function GiftBuilderShell() {
       };
 
       if (giftId) {
-        const data = await safeFetchJson(`/api/gifts/${giftId}`, {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
-        });
+        try {
+          await safeFetchJson(`/api/gifts/${giftId}`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+          });
 
-        setSaveSuccessMsg("Draft saved!");
-        setTimeout(() => setSaveSuccessMsg(null), 3000);
-        return giftId;
+          setSaveSuccessMsg("Draft saved!");
+          setTimeout(() => setSaveSuccessMsg(null), 3000);
+          return giftId;
+        } catch (err: any) {
+          // If draft record was deleted or not found on server, create a fresh draft
+          if (err.message?.includes("not found") || err.message?.includes("404")) {
+            console.warn("Stale giftId not found on server. Creating new draft record...");
+            const data = await safeFetchJson("/api/gifts", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(payload),
+            });
+
+            const newId = data.gift.id;
+            setGiftId(newId);
+            setSaveSuccessMsg("Draft created!");
+            setTimeout(() => setSaveSuccessMsg(null), 3000);
+            return newId;
+          }
+          throw err;
+        }
       } else {
         const data = await safeFetchJson("/api/gifts", {
           method: "POST",

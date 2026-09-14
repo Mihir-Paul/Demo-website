@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { hashPin } from "@/lib/security";
-import { CreateGiftSchema } from "@/types/gift";
+import { CreateGiftSchema, UpdateGiftSchema } from "@/types/gift";
 
 interface RouteParams {
   params: {
@@ -63,6 +63,7 @@ export async function PUT(req: Request, { params }: RouteParams) {
       return NextResponse.json({ error: "Gift ID parameter is required" }, { status: 400 });
     }
     const body = await req.json();
+    console.log("[PUT /api/gifts/[id]] Request body:", JSON.stringify(body, null, 2));
 
     const existingGift = await prisma.gift.findUnique({
       where: { id: giftId },
@@ -72,8 +73,9 @@ export async function PUT(req: Request, { params }: RouteParams) {
       return NextResponse.json({ error: "Gift not found" }, { status: 404 });
     }
 
-    const validation = CreateGiftSchema.partial().safeParse(body);
+    const validation = UpdateGiftSchema.safeParse(body);
     if (!validation.success) {
+      console.error("[PUT /api/gifts/[id]] Validation failed:", validation.error.flatten().fieldErrors);
       return NextResponse.json(
         {
           error: "Validation failed",
@@ -91,6 +93,14 @@ export async function PUT(req: Request, { params }: RouteParams) {
       pinHash = pin ? await hashPin(pin) : null;
     }
 
+    // Filter valid non-empty wishes and photos
+    const validWishes = wishes
+      ? wishes
+          .map((w: any) => (typeof w === "string" ? { text: w } : w))
+          .filter((w: any) => w && typeof w.text === "string" && w.text.trim().length > 0)
+      : [];
+    const validPhotos = photos?.filter((p) => p.url && p.url.trim().length > 0) || [];
+
     // Transaction to update gift and replace photos/wishes if provided
     const updatedGift = await prisma.$transaction(async (tx) => {
       if (photos !== undefined) {
@@ -107,23 +117,23 @@ export async function PUT(req: Request, { params }: RouteParams) {
           ...(message !== undefined && { message }),
           ...(letter !== undefined && { letter }),
           ...(theme !== undefined && { theme }),
-          pinHash,
+          ...(pin !== undefined && { pinHash }),
           ...(pinHint !== undefined && { pinHint }),
           ...(musicUrl !== undefined && { musicUrl }),
           ...(musicName !== undefined && { musicName }),
-          photos: photos?.length
+          photos: validPhotos.length
             ? {
-                create: photos.map((p, idx) => ({
-                  url: p.url,
-                  caption: p.caption || null,
+                create: validPhotos.map((p, idx) => ({
+                  url: p.url.trim(),
+                  caption: p.caption ? p.caption.trim() : null,
                   order: p.order ?? idx,
                 })),
               }
             : undefined,
-          wishes: wishes?.length
+          wishes: validWishes.length
             ? {
-                create: wishes.map((w, idx) => ({
-                  text: w.text,
+                create: validWishes.map((w, idx) => ({
+                  text: w.text.trim(),
                   order: w.order ?? idx,
                 })),
               }
@@ -134,6 +144,9 @@ export async function PUT(req: Request, { params }: RouteParams) {
           wishes: { orderBy: { order: "asc" } },
         },
       });
+    }, {
+      maxWait: 10000,
+      timeout: 30000,
     });
 
     const { pinHash: _, ...safeGift } = updatedGift;
@@ -146,11 +159,21 @@ export async function PUT(req: Request, { params }: RouteParams) {
       },
     });
   } catch (error: any) {
-    console.error(`[PUT /api/gifts/${giftId || "unknown"} Error]:`, error);
+    console.error(`================ [PUT /api/gifts/${giftId || "unknown"} FAILED] ================`);
+    console.error("GIFT ID:", giftId);
+    console.error("ERROR NAME:", error?.name);
+    console.error("ERROR MESSAGE:", error?.message);
+    console.error("PRISMA CODE:", error?.code);
+    console.error("PRISMA META:", error?.meta);
+    console.error("ERROR STACK:", error?.stack);
+    console.error("========================================================================");
     return NextResponse.json(
       {
         error: "Internal server error while updating gift",
-        details: process.env.NODE_ENV === "development" ? error.message : undefined,
+        details: error?.message || String(error),
+        code: error?.code,
+        meta: error?.meta,
+        stack: error?.stack,
       },
       { status: 500 }
     );

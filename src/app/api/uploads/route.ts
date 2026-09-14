@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import { put } from "@vercel/blob";
+import fs from "fs/promises";
+import path from "path";
 
 /**
  * POST /api/uploads
@@ -63,17 +65,19 @@ export async function POST(req: Request) {
         contentType: blob.contentType,
       });
     } else {
-      // Local dev fallback: Convert buffer to persistent Data URL
+      // Local dev fallback: Save file to public/uploads on disk to prevent bloated Data URLs
       const arrayBuffer = await file.arrayBuffer();
       const buffer = Buffer.from(arrayBuffer);
-      const mimeType = file.type || (isAudio ? "audio/mpeg" : "image/jpeg");
-      const base64 = buffer.toString("base64");
-      const dataUrl = `data:${mimeType};base64,${base64}`;
+      const uploadsDir = path.join(process.cwd(), "public", "uploads");
+      await fs.mkdir(uploadsDir, { recursive: true });
+      const sanitizedFilename = `${Date.now()}_${file.name.replace(/[^a-zA-Z0-9._-]/g, "_")}`;
+      const filePath = path.join(uploadsDir, sanitizedFilename);
+      await fs.writeFile(filePath, buffer);
 
       return NextResponse.json({
-        url: dataUrl,
+        url: `/uploads/${sanitizedFilename}`,
         filename: file.name,
-        contentType: mimeType,
+        contentType: file.type || (isAudio ? "audio/mpeg" : "image/jpeg"),
         isDevFallback: true,
       });
     }

@@ -90,6 +90,36 @@ export const CreateGiftSchema = z.object({
     .optional(),
 });
 
+export const UpdateGiftSchema = z.object({
+  recipientName: z.string().trim().max(100).optional(),
+  message: z.string().trim().max(300).optional(),
+  letter: z.string().max(3000, "Letter cannot exceed 3000 characters").optional().nullable(),
+  theme: z.enum(["sky-clouds", "festive-party", "midnight-celebration"]).optional(),
+  pin: z.string().regex(/^\d{4}$/, "PIN must be exactly 4 numeric digits").optional().nullable().or(z.literal("")),
+  pinHint: z.string().max(100).optional().nullable(),
+  musicUrl: z.string().nullable().optional(),
+  musicName: z.string().nullable().optional(),
+  photos: z
+    .array(
+      z.object({
+        id: z.string().optional(),
+        url: z.string(),
+        caption: z.string().optional().nullable(),
+        order: z.number().int().optional(),
+      })
+    )
+    .optional(),
+  wishes: z
+    .array(
+      z.object({
+        id: z.string().optional(),
+        text: z.string(),
+        order: z.number().int().optional(),
+      })
+    )
+    .optional(),
+});
+
 export const UnlockGiftSchema = z.object({
   pin: z.string().min(1, "PIN is required"),
 });

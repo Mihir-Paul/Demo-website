@@ -198,6 +198,10 @@ export function GiftBuilderShell() {
 
   // Upload pending music to persistent cloud storage
   const uploadPendingMusic = async (): Promise<string | null> => {
+    if (state.musicUrl) {
+      return state.musicUrl;
+    }
+
     if (state.musicFile && state.musicUploadStatus !== "uploaded") {
       setState((prev) => ({ ...prev, musicUploadStatus: "uploading", musicUploadError: undefined }));
 

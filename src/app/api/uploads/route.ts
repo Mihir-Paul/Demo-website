@@ -27,11 +27,13 @@ export async function POST(req: Request) {
       file.type.startsWith("audio/") ||
       file.type.startsWith("video/mp4") ||
       file.type.startsWith("video/ogg") ||
+      file.type === "application/octet-stream" ||
+      file.type === "" ||
       /\.(mp3|wav|m4a|ogg|aac|flac)$/i.test(file.name);
 
     if (!isImage && !isAudio) {
       return NextResponse.json(
-        { error: "Invalid file format. Please upload an image or audio file." },
+        { error: `Invalid file format (${file.type || "unknown"}). Please upload an image or audio file.` },
         { status: 400 }
       );
     }

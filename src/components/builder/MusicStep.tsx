@@ -66,13 +66,16 @@ export function MusicStep({
     };
   }, [activeAudioUrl]);
 
-  const handleFileSelect = (file: File) => {
+  const handleFileSelect = async (file: File) => {
     setErrorMsg(null);
 
     // 1. Validate extension / mime
     const ext = "." + file.name.split(".").pop()?.toLowerCase();
     const isValidExt = ALLOWED_EXTENSIONS.includes(ext);
-    const isValidMime = ALLOWED_MIME_PREFIXES.some((prefix) => file.type.startsWith(prefix));
+    const isValidMime =
+      ALLOWED_MIME_PREFIXES.some((prefix) => file.type.startsWith(prefix)) ||
+      file.type === "application/octet-stream" ||
+      file.type === "";
 
     if (!isValidExt && !isValidMime) {
       setErrorMsg("Please choose an MP3, WAV, M4A, or OGG file.");
@@ -88,14 +91,38 @@ export function MusicStep({
     // Create local object URL for preview
     const localUrl = URL.createObjectURL(file);
 
+    // Notify parent immediately that music is selected and uploading
     onChange({
       musicFile: file,
       musicPreviewUrl: localUrl,
-      musicUrl: null, // New file needs upload on save
+      musicUrl: null,
       musicName: file.name,
-      musicUploadStatus: "idle",
+      musicUploadStatus: "uploading",
       musicUploadError: undefined,
     });
+
+    try {
+      const { uploadFile } = await import("@/lib/upload");
+      const url = await uploadFile(file);
+      onChange({
+        musicFile: file,
+        musicPreviewUrl: localUrl,
+        musicUrl: url,
+        musicName: file.name,
+        musicUploadStatus: "uploaded",
+        musicUploadError: undefined,
+      });
+    } catch (err: any) {
+      console.warn("Music upload failed:", err);
+      onChange({
+        musicFile: file,
+        musicPreviewUrl: localUrl,
+        musicUrl: null,
+        musicName: file.name,
+        musicUploadStatus: "error",
+        musicUploadError: err.message || "Music upload failed. Please try again.",
+      });
+    }
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -185,7 +212,7 @@ export function MusicStep({
       <input
         ref={fileInputRef}
         type="file"
-        accept="audio/mpeg,audio/wav,audio/x-m4a,audio/ogg,audio/mp4,audio/aac,audio/flac"
+        accept="audio/*,video/mp4,video/ogg,.mp3,.wav,.m4a,.ogg,.aac,.flac"
         onChange={handleInputChange}
         className="hidden"
       />

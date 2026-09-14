@@ -6,7 +6,8 @@ import path from "path";
 /**
  * POST /api/uploads
  * Uploads a file (photo or music) to Vercel Blob persistent storage.
- * Falls back to Data URL encoding in local dev if BLOB_READ_WRITE_TOKEN is not configured.
+ * Uses Vercel Blob OIDC / automatic environment authentication on Vercel.
+ * Falls back to local disk storage in local dev if Vercel Blob is unconfigured/fails.
  */
 export async function POST(req: Request) {
   try {
@@ -45,52 +46,60 @@ export async function POST(req: Request) {
       );
     }
 
-    const token = process.env.BLOB_READ_WRITE_TOKEN;
-    const isTokenConfigured =
-      token &&
-      token.trim().length > 0 &&
-      !token.includes("vercel_blob_rw_token_example");
+    const sanitizedFilename = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
 
-    const isVercelProduction = Boolean(
-      process.env.VERCEL || process.env.VERCEL_ENV || process.env.NODE_ENV === "production"
-    );
-
-    if (isTokenConfigured) {
-      // Persistent Vercel Blob Storage Path
-      const sanitizedFilename = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
-      const blob = await put(`surprises/${sanitizedFilename}`, file, {
+    // Try Vercel Blob put() directly (uses Vercel OIDC or BLOB_READ_WRITE_TOKEN natively)
+    try {
+      const options: { access: "public"; addRandomSuffix: boolean; token?: string } = {
         access: "public",
         addRandomSuffix: true,
-        token: token.trim(),
-      });
+      };
+
+      // Only supply token if explicitly configured in env (e.g. manual token override)
+      if (
+        process.env.BLOB_READ_WRITE_TOKEN &&
+        process.env.BLOB_READ_WRITE_TOKEN.trim().length > 0 &&
+        !process.env.BLOB_READ_WRITE_TOKEN.includes("example")
+      ) {
+        options.token = process.env.BLOB_READ_WRITE_TOKEN.trim();
+      }
+
+      const blob = await put(`surprises/${sanitizedFilename}`, file, options);
 
       return NextResponse.json({
         url: blob.url,
         pathname: blob.pathname,
         contentType: blob.contentType,
       });
-    } else if (isVercelProduction) {
-      // In Vercel serverless production environment, return an explicit error
-      // instead of attempting to write to the read-only filesystem!
-      console.error("[POST /api/uploads Error]: BLOB_READ_WRITE_TOKEN environment variable is missing in Vercel project settings.");
-      return NextResponse.json(
-        {
-          error: "Vercel Blob Storage token (BLOB_READ_WRITE_TOKEN) is not configured in Vercel Environment Variables.",
-        },
-        { status: 500 }
+    } catch (blobError: any) {
+      const isVercel = Boolean(
+        process.env.VERCEL || process.env.VERCEL_ENV || process.env.NODE_ENV === "production"
       );
-    } else {
+
+      // On Vercel (production), fail immediately and return the exact Vercel Blob / OIDC error message
+      if (isVercel) {
+        console.error("[POST /api/uploads Vercel Blob Error]:", blobError);
+        return NextResponse.json(
+          { error: blobError?.message || "Vercel Blob upload failed." },
+          { status: 500 }
+        );
+      }
+
       // Local development fallback: Save to public/uploads directory on local disk
+      console.warn(
+        "[POST /api/uploads Local Dev Fallback]: Vercel Blob unconfigured locally, saving to local disk.",
+        blobError?.message
+      );
       const arrayBuffer = await file.arrayBuffer();
       const buffer = Buffer.from(arrayBuffer);
       const uploadsDir = path.join(process.cwd(), "public", "uploads");
       await fs.mkdir(uploadsDir, { recursive: true });
-      const sanitizedFilename = `${Date.now()}_${file.name.replace(/[^a-zA-Z0-9._-]/g, "_")}`;
-      const filePath = path.join(uploadsDir, sanitizedFilename);
+      const localFilename = `${Date.now()}_${sanitizedFilename}`;
+      const filePath = path.join(uploadsDir, localFilename);
       await fs.writeFile(filePath, buffer);
 
       return NextResponse.json({
-        url: `/uploads/${sanitizedFilename}`,
+        url: `/uploads/${localFilename}`,
         filename: file.name,
         contentType: file.type || (isAudio ? "audio/mpeg" : "image/jpeg"),
         isDevFallback: true,
@@ -104,3 +113,4 @@ export async function POST(req: Request) {
     );
   }
 }
+

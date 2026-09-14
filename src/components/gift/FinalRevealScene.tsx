@@ -1,6 +1,6 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect } from "react";
 import { motion } from "framer-motion";
-import { PartyPopper, RotateCcw, PlusCircle, Volume2, VolumeX } from "lucide-react";
+import { PartyPopper, RotateCcw, PlusCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { fireCelebrationConfetti } from "@/lib/confetti";
@@ -17,117 +17,21 @@ interface FinalRevealSceneProps {
 export function FinalRevealScene({
   recipientName,
   message,
-  musicUrl,
   onReplay,
   themeConfig,
 }: FinalRevealSceneProps) {
   const theme = themeConfig || getThemeConfig("sky-clouds");
   const emojis = theme.floatingEmojis;
 
-  const audioRef = useRef<HTMLAudioElement | null>(null);
-  const [isPlaying, setIsPlaying] = useState(false);
-
-  const hasValidMusic = Boolean(
-    musicUrl && typeof musicUrl === "string" && musicUrl.trim().length > 0 && !musicUrl.startsWith("blob:")
-  );
-
   // Trigger celebration confetti on mount
   useEffect(() => {
     fireCelebrationConfetti();
   }, []);
 
-  // Manage audio player exclusively for the Final Reveal Scene IF a valid uploaded soundtrack exists
-  useEffect(() => {
-    if (!hasValidMusic) return;
-
-    const audio = audioRef.current;
-    if (!audio) return;
-
-    audio.volume = 0.5;
-    audio.loop = true;
-
-    let isSubscribed = true;
-
-    const attemptPlay = () => {
-      audio
-        .play()
-        .then(() => {
-          if (isSubscribed) setIsPlaying(true);
-        })
-        .catch(() => {
-          // Autoplay blocked by browser policy until user gesture
-          if (isSubscribed) setIsPlaying(false);
-        });
-    };
-
-    attemptPlay();
-
-    // Clean up audio completely when leaving the final scene
-    return () => {
-      isSubscribed = false;
-      audio.pause();
-      audio.currentTime = 0;
-    };
-  }, [hasValidMusic, musicUrl]);
-
-  const togglePlay = () => {
-    if (!hasValidMusic) return;
-    const audio = audioRef.current;
-    if (!audio) return;
-
-    if (isPlaying) {
-      audio.pause();
-      setIsPlaying(false);
-    } else {
-      audio
-        .play()
-        .then(() => setIsPlaying(true))
-        .catch((err) => console.warn("Audio playback error:", err));
-    }
-  };
-
-  const handleSceneClickInteraction = () => {
-    if (hasValidMusic && !isPlaying && audioRef.current) {
-      audioRef.current
-        .play()
-        .then(() => setIsPlaying(true))
-        .catch(() => {});
-    }
-  };
-
   return (
     <div
-      onClick={handleSceneClickInteraction}
       className={`relative min-h-[100svh] w-full flex flex-col justify-between items-center py-8 px-4 sm:px-6 ${theme.bgGradient} ${theme.titleText} overflow-hidden`}
     >
-      {/* Audio Player and Music Control Pill rendered ONLY if a persistent uploaded soundtrack exists */}
-      {hasValidMusic && (
-        <>
-          <audio ref={audioRef} src={musicUrl!} preload="auto" loop />
-          <div className="fixed top-4 right-4 z-50">
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                togglePlay();
-              }}
-              className="flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/80 dark:bg-[#151F2E]/80 backdrop-blur border border-[#D7E8F5] dark:border-[#29374A] text-xs font-semibold shadow-lg hover:scale-105 transition-all text-[#26364A] dark:text-[#F5F7FA]"
-            >
-              {isPlaying ? (
-                <>
-                  <Volume2 className="w-3.5 h-3.5 text-[#1688D4] dark:text-[#A99AF4] animate-pulse" />
-                  <span>Music Playing 🎵</span>
-                </>
-              ) : (
-                <>
-                  <VolumeX className="w-3.5 h-3.5 text-rose-500" />
-                  <span>🎵 Tap to Play Music</span>
-                </>
-              )}
-            </button>
-          </div>
-        </>
-      )}
 
       {/* Perimeter Floating Decorations */}
       <motion.div

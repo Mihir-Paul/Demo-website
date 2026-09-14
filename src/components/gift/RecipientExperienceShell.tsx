@@ -266,7 +266,6 @@ export function RecipientExperienceShell({
               <FinalRevealScene
                 recipientName={gift.recipientName}
                 message={gift.message}
-                musicUrl={gift.musicUrl}
                 onReplay={handleReplay}
                 themeConfig={themeConfig}
               />

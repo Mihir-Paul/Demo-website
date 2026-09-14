@@ -23,12 +23,11 @@ const LOCAL_STORAGE_KEY = "joycraft_gift_builder_draft";
 const STEPS = [
   { number: 1, label: "Recipient" },
   { number: 2, label: "Memories" },
-  { number: 3, label: "Soundtrack" },
-  { number: 4, label: "Letter" },
-  { number: 5, label: "Wishes" },
-  { number: 6, label: "Theme" },
-  { number: 7, label: "Secret PIN" },
-  { number: 8, label: "Review" },
+  { number: 3, label: "Letter" },
+  { number: 4, label: "Wishes" },
+  { number: 5, label: "Theme" },
+  { number: 6, label: "Secret PIN" },
+  { number: 7, label: "Review" },
 ];
 
 const DEFAULT_STATE: GiftBuilderState = {
@@ -69,11 +68,6 @@ export function GiftBuilderShell() {
             typeof w === "string" ? w : (w?.text || "")
           );
 
-          const recoveredMusicUrl =
-            parsed.state.musicUrl && !parsed.state.musicUrl.startsWith("blob:")
-              ? parsed.state.musicUrl
-              : "";
-
           setState((prev) => ({
             ...prev,
             ...parsed.state,
@@ -89,10 +83,10 @@ export function GiftBuilderShell() {
                 uploadStatus: url ? "uploaded" : "pending",
               };
             }),
-            musicUrl: recoveredMusicUrl,
-            musicPreviewUrl: undefined, // Never restore blob: URLs as previewUrl
-            musicName: parsed.state.musicName || "",
-            musicUploadStatus: recoveredMusicUrl ? "uploaded" : "pending",
+            musicUrl: undefined,
+            musicPreviewUrl: undefined,
+            musicName: undefined,
+            musicUploadStatus: "pending",
           }));
         }
         if (parsed.giftId) setGiftId(parsed.giftId);
@@ -103,7 +97,7 @@ export function GiftBuilderShell() {
     }
   }, []);
 
-  // 2. Backup state to localStorage (stripping non-serializable File handles and blob: URLs)
+  // 2. Backup state to localStorage (stripping non-serializable File handles)
   useEffect(() => {
     try {
       const stateToCache = {
@@ -116,8 +110,8 @@ export function GiftBuilderShell() {
           order: p.order,
           uploadStatus: p.uploadStatus,
         })),
-        musicUrl: state.musicUrl && !state.musicUrl.startsWith("blob:") ? state.musicUrl : "",
-        musicPreviewUrl: undefined, // Never cache blob: object URLs
+        musicUrl: undefined,
+        musicPreviewUrl: undefined,
         musicFile: undefined,
       };
       localStorage.setItem(
@@ -143,22 +137,12 @@ export function GiftBuilderShell() {
     }
 
     if (stepNumber === 3) {
-      if (state.musicUploadStatus === "uploading") {
-        newErrors.music = "Soundtrack is currently uploading to cloud storage. Please wait for upload to complete.";
-      } else if (state.musicUploadStatus === "error") {
-        newErrors.music = "Soundtrack upload failed. Please retry the upload or remove the soundtrack before proceeding.";
-      } else if (state.musicFile && (!state.musicUrl || state.musicUrl.startsWith("blob:"))) {
-        newErrors.music = "Soundtrack file has not been successfully uploaded to Vercel Blob storage.";
-      }
-    }
-
-    if (stepNumber === 4) {
       if (state.letter && state.letter.length > 3000) {
         newErrors.letter = "Letter cannot exceed 3000 characters";
       }
     }
 
-    if (stepNumber === 7) {
+    if (stepNumber === 6) {
       if (state.pin && !/^\d{4}$/.test(state.pin)) {
         newErrors.pin = "PIN must be exactly 4 numeric digits (0-9)";
       }
@@ -166,99 +150,6 @@ export function GiftBuilderShell() {
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
-  };
-
-  // Immediate Soundtrack Upload handler
-  const handleSelectMusicFile = async (file: File) => {
-    const localPreviewUrl = URL.createObjectURL(file);
-    setState((prev) => ({
-      ...prev,
-      musicFile: file,
-      musicPreviewUrl: localPreviewUrl,
-      musicName: file.name,
-      musicUrl: undefined, // Clear musicUrl until permanent upload finishes
-      musicUploadStatus: "uploading",
-      musicUploadError: undefined,
-    }));
-    setErrors((prev) => {
-      const copy = { ...prev };
-      delete copy.music;
-      delete copy.global;
-      return copy;
-    });
-
-    try {
-      const permanentUrl = await uploadFile(file);
-      if (!permanentUrl || permanentUrl.startsWith("blob:")) {
-        throw new Error("Vercel Blob storage returned an invalid or temporary blob URL.");
-      }
-
-      setState((prev) => ({
-        ...prev,
-        musicUrl: permanentUrl,
-        musicUploadStatus: "uploaded",
-      }));
-    } catch (err: any) {
-      console.warn("Music upload failed:", err);
-      setState((prev) => ({
-        ...prev,
-        musicUrl: undefined,
-        musicUploadStatus: "error",
-        musicUploadError: err.message || "Audio upload failed. Please try again.",
-      }));
-    }
-  };
-
-  const handleRetryMusicUpload = async () => {
-    if (!state.musicFile) return;
-    await handleSelectMusicFile(state.musicFile);
-  };
-
-  const handleRemoveSong = () => {
-    if (state.musicPreviewUrl && state.musicPreviewUrl.startsWith("blob:")) {
-      URL.revokeObjectURL(state.musicPreviewUrl);
-    }
-    setState((prev) => ({
-      ...prev,
-      musicFile: undefined,
-      musicPreviewUrl: undefined,
-      musicUrl: undefined,
-      musicName: undefined,
-      musicUploadStatus: "pending",
-      musicUploadError: undefined,
-    }));
-    setErrors((prev) => {
-      const copy = { ...prev };
-      delete copy.music;
-      return copy;
-    });
-  };
-
-  const uploadPendingMusic = async (): Promise<string | undefined> => {
-    if (state.musicFile && state.musicUploadStatus !== "uploaded") {
-      setState((prev) => ({ ...prev, musicUploadStatus: "uploading", musicUploadError: undefined }));
-      try {
-        const url = await uploadFile(state.musicFile);
-        if (!url || url.startsWith("blob:")) {
-          throw new Error("Storage returned an invalid or temporary URL.");
-        }
-        setState((prev) => ({
-          ...prev,
-          musicUrl: url,
-          musicUploadStatus: "uploaded",
-        }));
-        return url;
-      } catch (err: any) {
-        const errMsg = err.message || "Soundtrack upload failed";
-        setState((prev) => ({
-          ...prev,
-          musicUploadStatus: "error",
-          musicUploadError: errMsg,
-        }));
-        throw new Error(`Soundtrack upload failed: ${errMsg}`);
-      }
-    }
-    return state.musicUrl && !state.musicUrl.startsWith("blob:") ? state.musicUrl : undefined;
   };
 
   // Upload pending photos to persistent cloud storage
@@ -337,7 +228,6 @@ export function GiftBuilderShell() {
 
     try {
       const currentPhotos = await uploadPendingPhotos();
-      const currentMusicUrl = await uploadPendingMusic();
 
       const validPhotosPayload = currentPhotos
         .map((p, idx) => {
@@ -355,11 +245,6 @@ export function GiftBuilderShell() {
         .filter((w) => typeof w === "string" && w.trim().length > 0)
         .map((w, idx) => ({ text: w.trim(), order: idx }));
 
-      const sanitizedMusicUrl =
-        currentMusicUrl && !currentMusicUrl.startsWith("blob:")
-          ? currentMusicUrl.trim()
-          : undefined;
-
       const payload = {
         recipientName: state.recipientName.trim() || "Someone Special",
         message: state.message.trim() || "Happy Birthday!",
@@ -367,8 +252,6 @@ export function GiftBuilderShell() {
         theme: state.theme,
         pin: state.pin.trim() || undefined,
         pinHint: state.pinHint.trim() || undefined,
-        musicUrl: sanitizedMusicUrl,
-        musicName: state.musicName || undefined,
         photos: validPhotosPayload,
         wishes: validWishesPayload,
       };
@@ -426,10 +309,9 @@ export function GiftBuilderShell() {
   const handleNext = async () => {
     if (!validateStep(currentStep)) return;
 
-    if (currentStep >= 1 && currentStep <= 7) {
+    if (currentStep >= 1 && currentStep <= 6) {
       const savedId = await saveToBackend();
       if (!savedId) {
-        // Save or media upload failed. Stop navigation immediately.
         return;
       }
     }
@@ -527,19 +409,6 @@ export function GiftBuilderShell() {
           )}
 
           {currentStep === 3 && (
-            <MusicStep
-              musicUrl={state.musicUrl}
-              musicName={state.musicName}
-              musicPreviewUrl={state.musicPreviewUrl}
-              musicUploadStatus={state.musicUploadStatus}
-              musicUploadError={state.musicUploadError || errors.music}
-              onSelectFile={handleSelectMusicFile}
-              onRemoveSong={handleRemoveSong}
-              onRetryUpload={handleRetryMusicUpload}
-            />
-          )}
-
-          {currentStep === 4 && (
             <LetterStep
               letter={state.letter}
               onChange={(letter) => setState({ ...state, letter })}
@@ -547,21 +416,21 @@ export function GiftBuilderShell() {
             />
           )}
 
-          {currentStep === 5 && (
+          {currentStep === 4 && (
             <WishesStep
               wishes={state.wishes}
               onChange={(wishes) => setState({ ...state, wishes })}
             />
           )}
 
-          {currentStep === 6 && (
+          {currentStep === 5 && (
             <ThemeStep
               theme={state.theme}
               onChange={(theme) => setState({ ...state, theme })}
             />
           )}
 
-          {currentStep === 7 && (
+          {currentStep === 6 && (
             <PinStep
               pin={state.pin}
               pinHint={state.pinHint}
@@ -570,7 +439,7 @@ export function GiftBuilderShell() {
             />
           )}
 
-          {currentStep === 8 && (
+          {currentStep === 7 && (
             <ReviewStep
               state={state}
               onEditStep={(stepNum) => setCurrentStep(stepNum)}
@@ -582,8 +451,8 @@ export function GiftBuilderShell() {
         </motion.div>
       </AnimatePresence>
 
-      {/* Bottom Step Navigation Footer (Steps 1 to 7) */}
-      {currentStep < 8 && (
+      {/* Bottom Step Navigation Footer (Steps 1 to 6) */}
+      {currentStep < 7 && (
         <div className="flex items-center justify-between pt-4 border-t border-[#D7E8F5] dark:border-[#29374A]">
           <Button
             type="button"

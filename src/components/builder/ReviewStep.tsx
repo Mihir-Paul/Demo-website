@@ -1,5 +1,5 @@
 import React from "react";
-import { Gift, Camera, Music, MessageSquare, Sparkles, Palette, Lock, ArrowLeft, Eye, Save } from "lucide-react";
+import { Gift, Camera, MessageSquare, Sparkles, Palette, Lock, ArrowLeft, Eye, Save } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { GiftBuilderState } from "@/types/gift";
 
@@ -25,7 +25,6 @@ export function ReviewStep({
   };
 
   const hasPhotos = state.photos.length > 0;
-  const activeMusicUrl = state.musicUrl || state.musicPreviewUrl;
 
   return (
     <div className="space-y-6 opacity-100">
@@ -87,31 +86,7 @@ export function ReviewStep({
           </p>
         </div>
 
-        {/* Step 3: Soundtrack */}
-        <div className="p-4 rounded-2xl bg-[#F7FBFF] border border-[#D7E8F5] dark:bg-[#172235] dark:border-[#29374A] space-y-1.5 opacity-100 shadow-sm">
-          <div className="flex items-center justify-between">
-            <span className="text-[10px] uppercase font-bold tracking-wider text-[#1688D4] dark:text-[#A99AF4] flex items-center gap-1.5">
-              <Music className="w-3.5 h-3.5 text-[#1688D4] dark:text-[#A99AF4]" /> Soundtrack
-            </span>
-            <button
-              type="button"
-              onClick={() => onEditStep(3)}
-              className="text-[11px] text-[#1688D4] dark:text-[#A99AF4] font-semibold hover:underline"
-            >
-              Edit
-            </button>
-          </div>
-          <p className="font-serif font-bold text-base text-[#26364A] dark:text-[#F5F7FA] truncate">
-            {state.musicName || (activeMusicUrl ? "Custom Song Uploaded 🎵" : "Default Birthday Track 🎵")}
-          </p>
-          {activeMusicUrl && (
-            <div className="pt-1">
-              <audio controls src={activeMusicUrl} className="w-full h-8" />
-            </div>
-          )}
-        </div>
-
-        {/* Step 4: Birthday Note / Letter */}
+        {/* Step 3: Birthday Note / Letter */}
         <div className="p-4 rounded-2xl bg-[#F7FBFF] border border-[#D7E8F5] dark:bg-[#172235] dark:border-[#29374A] space-y-1.5 opacity-100 shadow-sm">
           <div className="flex items-center justify-between">
             <span className="text-[10px] uppercase font-bold tracking-wider text-[#E85D83] dark:text-[#E7A6B7] flex items-center gap-1.5">
@@ -119,7 +94,7 @@ export function ReviewStep({
             </span>
             <button
               type="button"
-              onClick={() => onEditStep(4)}
+              onClick={() => onEditStep(3)}
               className="text-[11px] text-[#1688D4] dark:text-[#A99AF4] font-semibold hover:underline"
             >
               Edit
@@ -133,7 +108,7 @@ export function ReviewStep({
           </p>
         </div>
 
-        {/* Step 5: Wishes */}
+        {/* Step 4: Wishes */}
         <div className="p-4 rounded-2xl bg-[#F7FBFF] border border-[#D7E8F5] dark:bg-[#172235] dark:border-[#29374A] space-y-1.5 opacity-100 shadow-sm">
           <div className="flex items-center justify-between">
             <span className="text-[10px] uppercase font-bold tracking-wider text-[#8E7CC3] dark:text-[#F1D9A6] flex items-center gap-1.5">
@@ -141,7 +116,7 @@ export function ReviewStep({
             </span>
             <button
               type="button"
-              onClick={() => onEditStep(5)}
+              onClick={() => onEditStep(4)}
               className="text-[11px] text-[#1688D4] dark:text-[#A99AF4] font-semibold hover:underline"
             >
               Edit
@@ -155,7 +130,7 @@ export function ReviewStep({
           </p>
         </div>
 
-        {/* Step 6: Theme */}
+        {/* Step 5: Theme */}
         <div className="p-4 rounded-2xl bg-[#F7FBFF] border border-[#D7E8F5] dark:bg-[#172235] dark:border-[#29374A] space-y-1.5 opacity-100 shadow-sm">
           <div className="flex items-center justify-between">
             <span className="text-[10px] uppercase font-bold tracking-wider text-[#1688D4] dark:text-[#A99AF4] flex items-center gap-1.5">
@@ -163,7 +138,7 @@ export function ReviewStep({
             </span>
             <button
               type="button"
-              onClick={() => onEditStep(6)}
+              onClick={() => onEditStep(5)}
               className="text-[11px] text-[#1688D4] dark:text-[#A99AF4] font-semibold hover:underline"
             >
               Edit
@@ -174,7 +149,7 @@ export function ReviewStep({
           </p>
         </div>
 
-        {/* Step 7: PIN */}
+        {/* Step 6: PIN */}
         <div className="p-4 rounded-2xl bg-[#F7FBFF] border border-[#D7E8F5] dark:bg-[#172235] dark:border-[#29374A] space-y-1.5 sm:col-span-2 opacity-100 shadow-sm">
           <div className="flex items-center justify-between">
             <span className="text-[10px] uppercase font-bold tracking-wider text-[#1688D4] dark:text-[#8FAED8] flex items-center gap-1.5">
@@ -182,7 +157,7 @@ export function ReviewStep({
             </span>
             <button
               type="button"
-              onClick={() => onEditStep(7)}
+              onClick={() => onEditStep(6)}
               className="text-[11px] text-[#1688D4] dark:text-[#A99AF4] font-semibold hover:underline"
             >
               Edit
@@ -202,7 +177,7 @@ export function ReviewStep({
         <Button
           type="button"
           variant="ghost"
-          onClick={() => onEditStep(7)}
+          onClick={() => onEditStep(6)}
           className="w-full sm:w-auto gap-2 text-[#26364A] dark:text-[#F5F7FA]"
         >
           <ArrowLeft className="w-4 h-4" /> Edit Details
